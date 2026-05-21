@@ -91,6 +91,26 @@ export type CleaningPreviewResponse = {
   total_preview_changes: number;
 };
 
+export type AIInsightRequest = {
+  dataset_id: string;
+  row_count: number;
+  column_count: number;
+  quality_score: number;
+  status: string;
+  issue_summary: Record<string, number>;
+  top_problem_columns: string[];
+  recommended_actions: Record<string, any>[] | null;
+};
+
+export type AIInsightResponse = {
+  dataset_id: string;
+  summary: string;
+  biggest_risks: string[];
+  priority_fixes: string[];
+  readiness_status: string;
+  confidence_note: string;
+};
+
 export type CleaningApplyResponse = {
   dataset_id: string;
   selected_actions: string[];

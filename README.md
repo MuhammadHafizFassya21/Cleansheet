@@ -86,6 +86,12 @@ Catatan penyimpanan file:
 - File cleaned CSV disimpan **sementara di memori backend** (in-memory) selama runtime server.
 - Jika backend restart, file lama akan hilang dan endpoint download dapat mengembalikan 404: `Cleaned file not found or expired.`
 
+## Konfigurasi Gemini (untuk AI Insight)
+AI insight akan menggunakan Gemini **jika variabel berikut di-set**. Jika tidak diset, backend otomatis memakai fallback (tanpa error) sehingga fitur tetap bisa dicoba.
+
+- `GEMINI_API_KEY`=your_gemini_api_key_here
+- `GEMINI_MODEL`=gemini-1.5-flash
+
 ## Tech Stack
 - **Frontend**: Next.js 15, TypeScript, Tailwind CSS v4
 - **Backend**: FastAPI (Python), Pandas
