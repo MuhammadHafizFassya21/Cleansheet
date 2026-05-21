@@ -33,7 +33,8 @@ export default function CleanPage() {
 
   const downloadUrl = useMemo(() => {
     if (!applyResult?.download_id) return null;
-    return getCleanedCsvDownloadUrl(applyResult.download_id);
+    // Cache-buster to avoid the browser reusing a previous download response.
+    return `${getCleanedCsvDownloadUrl(applyResult.download_id)}?ts=${Date.now()}`;
   }, [applyResult]);
 
   const handleFileSelect = (file: File) => {

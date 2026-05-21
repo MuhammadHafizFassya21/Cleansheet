@@ -12,15 +12,31 @@ app = FastAPI(
     version="0.1.0",
 )
 
+
+def get_allowed_origins() -> list[str]:
+    app_env = os.getenv("APP_ENV", "development").strip().lower()
+    allowed_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
+    frontend_url = os.getenv("FRONTEND_URL", "").strip()
+
+    if allowed_origins:
+        origins = [origin.strip() for origin in allowed_origins.split(",") if origin.strip()]
+    elif frontend_url:
+        origins = [frontend_url]
+    else:
+        origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+    if app_env == "development":
+        origins.extend(["http://localhost:3000", "http://127.0.0.1:3000"])
+
+    if app_env != "development":
+        origins = [origin for origin in origins if origin != "*"]
+
+    return list(dict.fromkeys(origins))
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        origin.strip()
-        for origin in (
-            os.getenv("FRONTEND_URL", "http://localhost:3000") + ",http://127.0.0.1:3000"
-        ).split(",")
-        if origin.strip()
-    ],
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -163,6 +163,9 @@ async def download_cleaned_csv(download_id: str):
 
     return StreamingResponse(
         iter([csv_bytes]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{file_name}"'},
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{file_name}"',
+            "Cache-Control": "no-store",
+        },
     )

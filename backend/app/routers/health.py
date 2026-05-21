@@ -1,5 +1,7 @@
-from fastapi import APIRouter
+import os
 from datetime import datetime, timezone
+
+from fastapi import APIRouter
 
 router = APIRouter()
 
@@ -10,4 +12,5 @@ def health_check():
         "status": "ok",
         "service": "cleansheet-ai-backend",
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "app_env": os.getenv("APP_ENV", "development"),
     }
