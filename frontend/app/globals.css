@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: hsl(156, 72%, 40%);
+  --color-brand-secondary: hsl(156, 72%, 15%);
+  --color-brand-light: hsl(156, 72%, 97%);
+  --color-brand-dark: hsl(156, 72%, 5%);
+  
+  --color-bg-base-light: hsl(210, 40%, 98%);
+  --color-bg-base-dark: hsl(222, 47%, 11%);
+  
+  --font-family-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Custom styles and scrollbar customization */
+@layer base {
+  html, body {
+    font-family: var(--font-family-sans);
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-bg-base-light);
+    color: hsl(215, 25%, 27%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: var(--color-bg-base-dark);
+      color: hsl(210, 40%, 98%);
+    }
+  }
+}
+
+/* Dynamic glow and card effects */
+.glow-card {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.glow-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  box-shadow: 0 0 20px 2px rgba(16, 185, 129, 0.15);
+  pointer-events: none;
+}
+
+.glow-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.glow-card:hover::after {
+  opacity: 1;
+}

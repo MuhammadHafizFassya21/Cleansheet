@@ -1,0 +1,11 @@
+name,email,phone,city,transaction_date,total_spent
+ Budi  Santoso ,budi@gmail.com,0812-333-444,Jakarta,12/05/2024,150000
+Siti Rahma,siti@gmail.com,+62813555666,Surabaya,13/05/2024,250000
+Andi Wijaya,andi@yahoo,0819123456,Bandung,14/05/2024,100000
+Dewi Lestari,dewi@gmail.com,,Medan,15/05/2024,450000
+ Budi  Santoso ,budi@gmail.com,0812-333-444,Jakarta,12/05/2024,150000
+Rian Hidayat,rian.hidayat@outlook.com,62811222333,Yogyakarta,16/05/2024,300000
+Eka Saputra,eka.saputra@company.id,0812444555,Semarang,,120000
+Rina Melati,rina@gmail.com,0813777888,Denpasar,18/05/2024,500000
+Faisal Haris,faisal@gmail,0815999000,Makassar,19/05/2024,
+Grace Nainggolan,grace@gmail.com,+62812888999,Balikpapan,20/05/2024,750000
