@@ -91,3 +91,16 @@ export type CleaningPreviewResponse = {
   total_preview_changes: number;
 };
 
+export type CleaningApplyResponse = {
+  dataset_id: string;
+  selected_actions: string[];
+  cleaned_file_name: string;
+  original_row_count: number;
+  cleaned_row_count: number;
+  rows_removed: number;
+  cells_modified: number;
+  actions_applied: string[];
+  download_ready: boolean;
+  download_id: string;
+};
+

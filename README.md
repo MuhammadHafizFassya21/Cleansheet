@@ -63,6 +63,29 @@ Testing Phase 6:
 6. Click "Preview Selected Fixes"
 7. Review before-after table showing changes
 
+## Phase 7 — Apply Cleaning & Download Cleaned CSV
+
+Fitur Phase 7 memungkinkan user menerapkan cleaning actions yang dipilih dan mengunduh CSV hasil pembersihan.
+
+Testing Phase 7:
+1. Open [http://localhost:3000/clean](http://localhost:3000/clean)
+2. Upload `sample_customer_dirty_data.csv`
+3. Klik **"Get Cleaning Recommendations"**
+4. Centang beberapa **Recommended Actions**
+5. Klik **"Preview Selected Fixes"** untuk melihat perubahan sebelum apply
+6. Klik **"Apply Selected Fixes"**
+7. Pastikan muncul **Cleaning completed** dan ringkasan:
+   - Original rows
+   - Cleaned rows
+   - Rows removed
+   - Cells modified
+   - Actions applied
+8. Klik **"Download Cleaned CSV"** untuk mengunduh file hasil cleaning
+
+Catatan penyimpanan file:
+- File cleaned CSV disimpan **sementara di memori backend** (in-memory) selama runtime server.
+- Jika backend restart, file lama akan hilang dan endpoint download dapat mengembalikan 404: `Cleaned file not found or expired.`
+
 ## Tech Stack
 - **Frontend**: Next.js 15, TypeScript, Tailwind CSS v4
 - **Backend**: FastAPI (Python), Pandas

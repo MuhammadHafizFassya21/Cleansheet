@@ -65,3 +65,25 @@ export async function getCleaningPreview(file: File, selectedActions: string[] =
   return response.json();
 }
 
+export async function applyCleaningActions(file: File, selectedActions: string[]) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("selected_actions", JSON.stringify(selectedActions));
+
+  const response = await fetch(`${API_BASE_URL}/api/clean/apply`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.detail || "Unable to apply cleaning actions.");
+  }
+
+  return response.json();
+}
+
+export function getCleanedCsvDownloadUrl(downloadId: string) {
+  return `${API_BASE_URL}/api/clean/download/${downloadId}`;
+}
+

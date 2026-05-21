@@ -2,9 +2,11 @@ import json
 import uuid
 
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
+from fastapi.responses import StreamingResponse
 
-from ..models.cleaning import CleaningPreviewResponse
+from ..models.cleaning import CleaningPreviewResponse, CleaningApplyResponse
 from ..services import parser_service, quality_engine, cleaning_engine
+from ..services.file_store import save_cleaned_csv, get_cleaned_csv
 
 router = APIRouter()
 
@@ -65,3 +67,91 @@ async def cleaning_preview(
         preview_limit=100,
         total_preview_changes=total_preview_changes,
     )
+
+
+@router.post("/apply", response_model=CleaningApplyResponse)
+async def cleaning_apply(
+    file: UploadFile = File(...),
+    selected_actions: str = Form(default="[]"),
+):
+    """
+    Apply selected cleaning actions and return cleaned CSV download info.
+    """
+    try:
+        contents = await file.read()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Unable to parse CSV file.")
+
+    file_size = len(contents)
+    parser_service.validate_csv_file(file, file_size)
+
+    try:
+        df = parser_service.read_csv_file(contents)
+    except HTTPException as e:
+        raise e
+    except Exception:
+        raise HTTPException(status_code=400, detail="Unable to parse CSV file.")
+
+    # Parse selected actions (JSON string or comma-separated)
+    selected_actions_list: list[str] = []
+    raw = selected_actions if isinstance(selected_actions, str) else ""
+    try:
+        selected_actions_list = json.loads(raw)
+        if not isinstance(selected_actions_list, list):
+            selected_actions_list = []
+    except json.JSONDecodeError:
+        selected_actions_list = [s.strip() for s in raw.split(",") if s.strip()]
+
+    if not selected_actions_list:
+        raise HTTPException(status_code=400, detail="No cleaning action selected.")
+
+    # Apply cleaning
+    try:
+        cleaned_df, original_row_count, cleaned_row_count, rows_removed, cells_modified, actions_applied = (
+            cleaning_engine.apply_cleaning_actions(df, selected_actions_list)
+        )
+    except ValueError as e:
+        # invalid selected cleaning action
+        msg = str(e)
+        if msg.startswith("Invalid selected cleaning action"):
+            raise HTTPException(status_code=400, detail="Invalid selected cleaning action.")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Unable to apply cleaning actions.")
+
+    dataset_id = f"ds_{uuid.uuid4().hex[:8]}"
+    original_name = file.filename or "dataset.csv"
+    cleaned_file_name = f"cleaned_{original_name}"
+
+    try:
+        csv_bytes = cleaning_engine.dataframe_to_csv_bytes(cleaned_df)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Unable to apply cleaning actions.")
+
+    download_id = save_cleaned_csv(csv_bytes, cleaned_file_name)
+
+    return CleaningApplyResponse(
+        dataset_id=dataset_id,
+        selected_actions=selected_actions_list,
+        cleaned_file_name=cleaned_file_name,
+        original_row_count=original_row_count,
+        cleaned_row_count=cleaned_row_count,
+        rows_removed=rows_removed,
+        cells_modified=cells_modified,
+        actions_applied=actions_applied,
+        download_ready=True,
+        download_id=download_id,
+    )
+
+
+@router.get("/download/{download_id}")
+async def cleaning_download(download_id: str):
+    payload = get_cleaned_csv(download_id)
+    if not payload:
+        raise HTTPException(status_code=404, detail="Cleaned file not found or expired.")
+
+    csv_bytes = payload["bytes"]
+    file_name = payload.get("file_name") or "cleaned.csv"
+
+    headers = {"Content-Disposition": f'attachment; filename="{file_name}"'}
+    return StreamingResponse(iter([csv_bytes]), media_type="text/csv", headers=headers)

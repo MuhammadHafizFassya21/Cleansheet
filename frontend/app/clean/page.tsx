@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { getCleaningPreview } from "@/lib/api";
-import { CleaningPreviewResponse } from "@/lib/types";
+import { applyCleaningActions, getCleanedCsvDownloadUrl, getCleaningPreview } from "@/lib/api";
+import { CleaningApplyResponse, CleaningPreviewResponse } from "@/lib/types";
 import CleaningHeader from "@/components/clean/CleaningHeader";
 import CleaningUploadCard from "@/components/clean/CleaningUploadCard";
 import CleaningEmptyState from "@/components/clean/CleaningEmptyState";
@@ -11,6 +11,7 @@ import CleaningLoadingState from "@/components/clean/CleaningLoadingState";
 import CleaningErrorState from "@/components/clean/CleaningErrorState";
 import RecommendedActions from "@/components/clean/RecommendedActions";
 import BeforeAfterPreviewTable from "@/components/clean/BeforeAfterPreviewTable";
+import CleaningSummaryCard from "@/components/clean/CleaningSummaryCard";
 
 export default function CleanPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -19,12 +20,17 @@ export default function CleanPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedActions, setSelectedActions] = useState<string[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [applyLoading, setApplyLoading] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [applyResult, setApplyResult] = useState<CleaningApplyResponse | null>(null);
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
     setPreview(null);
     setError(null);
     setSelectedActions([]);
+    setApplyResult(null);
+    setApplyError(null);
   };
 
   const handleGetRecommendations = async () => {
@@ -65,6 +71,26 @@ export default function CleanPage() {
       setPreviewLoading(false);
     }
   };
+
+  const handleApplySelected = async () => {
+    if (!selectedFile) return;
+    if (selectedActions.length === 0) return;
+
+    setApplyLoading(true);
+    setApplyError(null);
+
+    try {
+      const result: CleaningApplyResponse = await applyCleaningActions(selectedFile, selectedActions);
+      setApplyResult(result);
+    } catch (err: any) {
+      console.error(err);
+      setApplyError(err?.message || "Unable to apply cleaning actions.");
+    } finally {
+      setApplyLoading(false);
+    }
+  };
+
+  const downloadUrl = applyResult?.download_id ? getCleanedCsvDownloadUrl(applyResult.download_id) : null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
@@ -119,15 +145,44 @@ export default function CleanPage() {
             totalChanges={preview.total_preview_changes}
           />
 
-          <div className="flex flex-col gap-3 items-center sm:flex-row sm:justify-center">
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center justify-center rounded-3xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
-            >
-              Download Cleaned CSV
-            </button>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Coming in Phase 7</span>
+          <div className="space-y-4">
+            {applyError && <CleaningErrorState message={applyError} />}
+
+            {applyResult ? (
+              <>
+                <CleaningSummaryCard summary={applyResult} />
+
+                {downloadUrl && (
+                  <div className="flex flex-col gap-3 items-center sm:flex-row sm:justify-center">
+                    <a
+                      href={downloadUrl}
+                      className="inline-flex items-center justify-center rounded-3xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors"
+                      download={applyResult.cleaned_file_name}
+                    >
+                      Download Cleaned CSV
+                    </a>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col gap-3 items-center sm:flex-row sm:justify-center">
+                <button
+                  type="button"
+                  onClick={handleApplySelected}
+                  disabled={applyLoading || selectedActions.length === 0}
+                  className="inline-flex items-center justify-center rounded-3xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                >
+                  {applyLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Applying Fixes
+                    </>
+                  ) : (
+                    "Apply Selected Fixes"
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
