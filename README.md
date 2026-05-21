@@ -40,6 +40,29 @@ This stage improves the dashboard presentation and user experience without addin
 - Filterable issue table with severity and type badges
 - Continue to Cleaning placeholder button
 
+## Phase 6 — Cleaning Recommendations & Before-After Preview
+This stage enables safe cleaning recommendations and before-after preview without implementing final export or database.
+
+- Cleaning recommendation engine that suggests safe actions based on detected issues
+- Four core cleaning actions:
+  - Trim whitespace (safe)
+  - Normalize Indonesian phone numbers (review recommended)
+  - Remove duplicate rows (safe)
+  - Standardize missing value placeholders (safe)
+- Backend `/api/clean/preview` endpoint for recommendations and preview generation
+- Before-after preview table showing what will change
+- Frontend cleaning page with action selection and interactive preview
+- Disabled download button placeholder for Phase 7
+
+Testing Phase 6:
+1. Open [http://localhost:3000/clean](http://localhost:3000/clean)
+2. Upload `sample_customer_dirty_data.csv`
+3. Click "Get Cleaning Recommendations"
+4. Review recommended actions and their affected cells/rows
+5. Select actions with checkboxes
+6. Click "Preview Selected Fixes"
+7. Review before-after table showing changes
+
 ## Tech Stack
 - **Frontend**: Next.js 15, TypeScript, Tailwind CSS v4
 - **Backend**: FastAPI (Python), Pandas

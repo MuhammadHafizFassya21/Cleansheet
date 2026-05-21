@@ -1,77 +1,136 @@
 "use client";
 
-import React from "react";
-import { Sparkles, ArrowRight, HelpCircle, Info } from "lucide-react";
+import React, { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { getCleaningPreview } from "@/lib/api";
+import { CleaningPreviewResponse } from "@/lib/types";
+import CleaningHeader from "@/components/clean/CleaningHeader";
+import CleaningUploadCard from "@/components/clean/CleaningUploadCard";
+import CleaningEmptyState from "@/components/clean/CleaningEmptyState";
+import CleaningLoadingState from "@/components/clean/CleaningLoadingState";
+import CleaningErrorState from "@/components/clean/CleaningErrorState";
+import RecommendedActions from "@/components/clean/RecommendedActions";
+import BeforeAfterPreviewTable from "@/components/clean/BeforeAfterPreviewTable";
 
 export default function CleanPage() {
-  const mockFixes = [
-    { rule: "Trim Whitespace", desc: "Menghapus spasi di awal dan akhir sel.", status: "Ready" },
-    { rule: "Hapus Duplikasi", desc: "Menghapus baris duplikat berdasarkan baris unik.", status: "Ready" },
-    { rule: "Normalisasi Nomor Telepon", desc: "Format ke nomor standar internasional (+62/62).", status: "Ready" },
-  ];
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<CleaningPreviewResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedActions, setSelectedActions] = useState<string[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    setPreview(null);
+    setError(null);
+    setSelectedActions([]);
+  };
+
+  const handleGetRecommendations = async () => {
+    if (!selectedFile) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await getCleaningPreview(selectedFile, []);
+      setPreview(result);
+      setSelectedActions([]);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Unable to generate cleaning preview.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleAction = (actionId: string) => {
+    setSelectedActions((prev) =>
+      prev.includes(actionId) ? prev.filter((a) => a !== actionId) : [...prev, actionId]
+    );
+  };
+
+  const handlePreviewSelected = async () => {
+    if (!selectedFile || !preview) return;
+    setPreviewLoading(true);
+    setError(null);
+
+    try {
+      const result = await getCleaningPreview(selectedFile, selectedActions);
+      setPreview(result);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Unable to generate cleaning preview.");
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-2">
-          <Sparkles className="h-7 w-7 text-emerald-500" />
-          Bersihkan Data CSV
-        </h1>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Terapkan perbaikan otomatis secara aman ke dalam berkas Anda.
-        </p>
+    <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
+      <CleaningHeader />
+
+      <div className="mt-10 mb-10">
+        <CleaningUploadCard
+          selectedFile={selectedFile}
+          onFileSelect={handleFileSelect}
+          onGetRecommendations={handleGetRecommendations}
+          loading={loading}
+          error={error}
+        />
       </div>
 
-      <div className="grid gap-8 md:grid-cols-3">
-        {/* Cleaning Options Panel */}
-        <div className="md:col-span-1 rounded-2xl border border-slate-200/80 bg-white/60 dark:border-slate-800 dark:bg-slate-900/40 p-6 flex flex-col justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-4">
-              Pilihan Pembersihan
-            </h2>
-            <div className="space-y-3">
-              {mockFixes.map((fix, idx) => (
-                <div key={idx} className="flex items-start gap-2.5">
-                  <input
-                    type="checkbox"
-                    disabled
-                    checked
-                    className="mt-1 h-3.5 w-3.5 rounded-sm border-slate-300 text-emerald-500 cursor-not-allowed"
-                  />
-                  <div>
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      {fix.rule}
-                    </p>
-                    <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
-                      {fix.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
+      {loading ? (
+        <CleaningLoadingState />
+      ) : error && !preview ? (
+        <CleaningErrorState message={error} />
+      ) : !preview ? (
+        <CleaningEmptyState />
+      ) : (
+        <div className="space-y-8">
+          <RecommendedActions
+            actions={preview.recommended_actions}
+            selectedActions={selectedActions}
+            onToggle={handleToggleAction}
+          />
+
+          {selectedActions.length > 0 && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={handlePreviewSelected}
+                disabled={previewLoading}
+                className="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              >
+                {previewLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Preview
+                  </>
+                ) : (
+                  "Preview Selected Fixes"
+                )}
+              </button>
             </div>
-          </div>
+          )}
 
-          <button
-            disabled
-            className="w-full mt-6 rounded-xl bg-slate-100 dark:bg-slate-800 px-4 py-3 text-xs font-semibold text-slate-400 cursor-not-allowed border border-slate-200/50 dark:border-slate-700/50"
-          >
-            Jalankan Pembersihan
-          </button>
-        </div>
+          <BeforeAfterPreviewTable
+            changes={preview.preview_changes}
+            totalChanges={preview.total_preview_changes}
+          />
 
-        {/* Before/After Preview Panel */}
-        <div className="md:col-span-2 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white/30 dark:bg-slate-900/20 p-8 flex flex-col items-center justify-center min-h-[300px]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-950/40 mb-4">
-            <Info className="h-5 w-5" />
+          <div className="flex flex-col gap-3 items-center sm:flex-row sm:justify-center">
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center justify-center rounded-3xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+            >
+              Download Cleaned CSV
+            </button>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Coming in Phase 7</span>
           </div>
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
-            Pratinjau Sebelum & Sesudah
-          </h3>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 text-center max-w-sm leading-relaxed">
-            Perbandingan visual sebelum dan sesudah data dibersihkan akan diimplementasikan pada **Phase 7 — Cleaning and Export**.
-          </p>
         </div>
-      </div>
+      )}
     </div>
   );
 }

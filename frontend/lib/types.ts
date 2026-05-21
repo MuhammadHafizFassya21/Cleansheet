@@ -62,3 +62,32 @@ export type DataQualityAnalysisResponse = {
   issues: DataQualityIssue[];
   top_problem_columns: string[];
 };
+
+export type CleaningAction = {
+  id: string;
+  label: string;
+  description: string;
+  issue_types: string[];
+  affected_cells: number;
+  affected_rows: number;
+  safe_to_apply: boolean;
+};
+
+export type CleaningPreviewChange = {
+  row_index: number | null;
+  column: string | null;
+  original_value: string | null;
+  cleaned_value: string | null;
+  action_id: string;
+  message: string;
+};
+
+export type CleaningPreviewResponse = {
+  dataset_id: string;
+  recommended_actions: CleaningAction[];
+  selected_actions: string[];
+  preview_changes: CleaningPreviewChange[];
+  preview_limit: number;
+  total_preview_changes: number;
+};
+

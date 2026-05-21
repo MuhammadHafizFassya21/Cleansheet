@@ -46,3 +46,22 @@ export async function analyzeCsvFile(file: File) {
 
   return response.json();
 }
+
+export async function getCleaningPreview(file: File, selectedActions: string[] = []) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("selected_actions", JSON.stringify(selectedActions));
+
+  const response = await fetch(`${API_BASE_URL}/api/clean/preview`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.detail || "Unable to generate cleaning preview.");
+  }
+
+  return response.json();
+}
+
