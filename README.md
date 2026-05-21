@@ -1,228 +1,151 @@
 # CleanSheet AI
 
-CleanSheet AI is an AI-powered data quality checker that helps users upload CSV files, detect hidden data issues, understand their impact, and download cleaned data.
+CleanSheet AI adalah aplikasi **pengecek kualitas data CSV** yang membantu pengguna mengunggah dataset, mendeteksi isu tersembunyi, memahami risikonya dengan insight AI (opsional), membersihkan data dengan aman, lalu mengunduh CSV yang lebih rapi.
+
+## Overview
+- **Frontend**: Next.js (App Router), TypeScript, Tailwind CSS
+- **Backend**: FastAPI (Python), Pandas
+- **AI (opsional)**: Gemini API dengan fallback (tanpa API key tetap jalan)
 
 ## Problem
-Many CSV and spreadsheet files contain hidden quality issues such as duplicates, missing values, invalid emails, inconsistent phone numbers, strange characters, and unnecessary spaces.
+Banyak file CSV/spreadsheet terlihat rapi, tetapi memiliki isu tersembunyi seperti:
+- baris duplikat
+- nilai kosong / placeholder (N/A, NULL, -, unknown)
+- email tidak valid
+- format nomor telepon tidak konsisten
+- whitespace berlebih (spasi/tab/newline)
+- karakter aneh / encoding rusak
 
 ## Solution
-CleanSheet AI detects these issues automatically, generates a Data Quality Score, explains the impact using AI, and recommends safe cleaning actions.
+CleanSheet AI menggabungkan **rule-based data validation** dan **Gemini-powered insight** untuk membantu user non-teknis:
+1) menemukan isu kualitas data
+2) memahami dampak dan prioritas perbaikan
+3) menerapkan pembersihan yang aman (dengan pratinjau sebelum–sesudah)
+4) mengunduh CSV yang lebih bersih
 
 ## Target Users
-- Students
-- Researchers
-- MSMEs
-- School admins
-- Operations teams
-- Beginner data analysts
+- Mahasiswa & peneliti
+- UMKM
+- Admin sekolah
+- Tim operasional
+- Pemula data analyst
 
-## MVP Features
-- CSV upload
-- Dataset preview
-- Duplicate detection
-- Missing value detection
-- Whitespace detection
-- Strange character detection
-- Email validation
-- Indonesian phone validation
-- Data Quality Score
-- AI summary
-- Cleaned CSV download
-
-## Phase 5 — Dashboard UX Improvements
-This stage improves the dashboard presentation and user experience without adding AI cleaning, download export, or authentication.
-
-- Dashboard hero section with clear purpose and rule-based badge
-- Clean upload analysis card with drag-and-drop support
-- Empty, loading, and friendly error states
-- Large quality score visualization with status and progress bar
-- Summary issue cards and issue type breakdown bars
-- Filterable issue table with severity and type badges
-- Continue to Cleaning placeholder button
-
-## Phase 6 — Cleaning Recommendations & Before-After Preview
-This stage enables safe cleaning recommendations and before-after preview without implementing final export or database.
-
-- Cleaning recommendation engine that suggests safe actions based on detected issues
-- Four core cleaning actions:
-  - Trim whitespace (safe)
-  - Normalize Indonesian phone numbers (review recommended)
-  - Remove duplicate rows (safe)
-  - Standardize missing value placeholders (safe)
-- Backend `/api/clean/preview` endpoint for recommendations and preview generation
-- Before-after preview table showing what will change
-- Frontend cleaning page with action selection and interactive preview
-- Disabled download button placeholder for Phase 7
-
-Testing Phase 6:
-1. Open [http://localhost:3000/clean](http://localhost:3000/clean)
-2. Upload `sample_customer_dirty_data.csv`
-3. Click "Get Cleaning Recommendations"
-4. Review recommended actions and their affected cells/rows
-5. Select actions with checkboxes
-6. Click "Preview Selected Fixes"
-7. Review before-after table showing changes
-
-## Phase 7 — Apply Cleaning & Download Cleaned CSV
-
-Fitur Phase 7 memungkinkan user menerapkan cleaning actions yang dipilih dan mengunduh CSV hasil pembersihan.
-
-Testing Phase 7:
-1. Open [http://localhost:3000/clean](http://localhost:3000/clean)
-2. Upload `sample_customer_dirty_data.csv`
-3. Klik **"Get Cleaning Recommendations"**
-4. Centang beberapa **Recommended Actions**
-5. Klik **"Preview Selected Fixes"** untuk melihat perubahan sebelum apply
-6. Klik **"Apply Selected Fixes"**
-7. Pastikan muncul **Cleaning completed** dan ringkasan:
-   - Original rows
-   - Cleaned rows
-   - Rows removed
-   - Cells modified
-   - Actions applied
-8. Klik **"Download Cleaned CSV"** untuk mengunduh file hasil cleaning
-
-Catatan penyimpanan file:
-- File cleaned CSV disimpan **sementara di memori backend** (in-memory) selama runtime server.
-- Jika backend restart, file lama akan hilang dan endpoint download dapat mengembalikan 404: `Cleaned file not found or expired.`
-
-## Konfigurasi Gemini (untuk AI Insight)
-AI insight akan menggunakan Gemini **jika variabel berikut di-set**. Jika tidak diset, backend otomatis memakai fallback (tanpa error) sehingga fitur tetap bisa dicoba.
-
-- `GEMINI_API_KEY`=your_gemini_api_key_here
-- `GEMINI_MODEL`=gemini-1.5-flash
-
----
-
-## Demo Guide (Phase 9)
-Demo flow yang direkomendasikan (untuk kompetisi / presentasi):
-
-1. Open homepage: `http://localhost:3000/`
-2. Go to Dashboard: `http://localhost:3000/dashboard`
-3. Upload `sample-data/sample_customer_dirty_data.csv`
-4. Click **Analyze** untuk melihat quality score + issue list
-5. (Opsional) Generate AI Insight di dashboard (jika tersedia) atau lanjut ke report page untuk AI insight
-6. Go to Clean page: `http://localhost:3000/clean`
-7. Click **Get Cleaning Recommendations**
-8. Select actions → **Preview Selected Fixes**
-9. Click **Apply Selected Fixes**
-10. Download cleaned CSV
-11. Open Report page: `http://localhost:3000/report`
-12. Upload CSV lagi → **Generate Report** untuk report-style final summary
-
-Catatan: report page upload ulang karena belum ada database / global persistence.
-
----
-
-## Competition Pitch (Phase 9)
-
-**Problem**
-- CSV/spreadsheet sering terlihat rapi, tapi punya masalah tersembunyi (duplikat, missing value, invalid email/phone, whitespace, karakter aneh) yang membuat keputusan/analisis jadi salah.
-
-**Solution**
-- CleanSheet AI menggabungkan rule-based quality checks + Gemini-powered insight untuk menjelaskan apa yang salah, dampaknya, dan prioritas perbaikan, lalu memberi rekomendasi cleaning yang aman.
-
-**Target Users**
-- Student & researcher, UMKM, school admin, ops teams, dan pemula data analyst.
-
-**Why it matters**
-- Data yang buruk menghasilkan metrik yang menyesatkan, biaya operasional meningkat, dan keputusan menjadi tidak akurat.
-
-**Gemini usage**
-- Dipakai untuk menghasilkan ringkasan dan prioritas perbaikan yang mudah dipahami non-teknis.
-
-**Privacy-aware AI design**
-- CleanSheet AI tidak mengirim full dataset ke Gemini. AI insight hanya memakai ringkasan statistik (quality score, issue counts, top problem columns, rekomendasi action).
-
-**Impact**
-- Membantu user memastikan dataset “siap pakai” sebelum dipakai untuk laporan, forecasting, atau model ML sederhana.
+## Features
+- Upload CSV + dataset preview
+- Data Quality Score (0–100) + status
+- Deteksi isu: duplikat, missing value, whitespace, karakter aneh, email/telepon tidak valid
+- Dashboard isu + filter
+- Rekomendasi pembersihan + pratinjau before/after
+- Apply cleaning + download cleaned CSV
+- Report page (ringkasan final demo-ready)
+- AI Insight (Gemini) dengan desain privasi (summary-only)
 
 ## Tech Stack
-- **Frontend**: Next.js 15, TypeScript, Tailwind CSS v4
-- **Backend**: FastAPI (Python), Pandas
-- **AI**: Gemini API
-- **Deployment**: Google Cloud Run
+- **Frontend**: Next.js 15, TypeScript, Tailwind CSS
+- **Backend**: FastAPI, Pandas
+- **AI**: Gemini API (opsional)
 
----
+## Architecture
+- `frontend/`: Next.js UI (routes: `/`, `/upload`, `/dashboard`, `/clean`, `/report`)
+- `backend/`: FastAPI API (routes: `/health`, `/api/upload`, `/api/analyze`, `/api/clean/*`, `/api/ai/insight`)
+- `sample-data/`: contoh CSV untuk demo
+- `docs/`: roadmap, demo script, QA checklist
 
-## Panduan Memulai (Get Started)
+## Getting Started
 
-### 1. Prasyarat (Prerequisites)
-Pastikan Anda memiliki tools berikut terinstal di komputer Anda:
-- **Node.js** (Versi 18 atau lebih baru)
-- **Python** (Versi 3.9 atau lebih baru)
-- **Git**
-
----
-
-### 2. Konfigurasi & Menjalankan Backend (FastAPI)
-
-Kembali ke direktori root proyek, ikuti langkah berikut:
-
+### Backend Setup (FastAPI)
 ```bash
-# Pindah ke folder backend
 cd backend
-
-# Buat virtual environment (.venv)
 python -m venv .venv
-
-# Aktifkan virtual environment
-# Untuk Windows:
 .venv\Scripts\activate
-# Untuk macOS/Linux:
-source .venv/bin/activate
-
-# Install dependensi backend
 pip install -r requirements.txt
-
-# Salin file environment variabel
 copy .env.example .env
-
-# Jalankan server lokal backend
 uvicorn app.main:app --reload --port 8000
 ```
 
-Setelah server menyala, Anda dapat memverifikasi status backend dengan mengakses url berikut di browser Anda:
-- Halaman Utama API: [http://localhost:8000/](http://localhost:8000/)
-- Endpoint Health Check: [http://localhost:8000/health](http://localhost:8000/health)
+Health check:
+- `http://localhost:8000/health`
 
----
-
-### 3. Konfigurasi & Menjalankan Frontend (Next.js)
-
-Buka terminal baru di direktori root proyek:
-
+### Frontend Setup (Next.js)
 ```bash
-# Pindah ke folder frontend
 cd frontend
-
-# Install dependensi frontend
 npm install
-
-# Salin file environment variabel
 copy .env.example .env.local
-
-# Jalankan server development frontend
 npm run dev
 ```
 
-Buka browser Anda dan akses aplikasi CleanSheet AI di:
-- **[http://localhost:3000/](http://localhost:3000/)**
+Open:
+- `http://localhost:3000/`
 
-Aplikasi pada halaman utama akan otomatis mendeteksi status koneksi ke server backend Anda (FastAPI) dan menampilkannya pada Status Badge di atas halaman.
+### Environment Variables
 
----
+**Frontend** (`frontend/.env.local`)
+- `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`
 
-## 4. Pengujian Fitur Phase 3 (CSV Upload & Data Preview)
+**Backend** (`backend/.env`)
+- `FRONTEND_URL=http://localhost:3000`
+- `APP_NAME="CleanSheet AI API"`
+- `APP_ENV=development`
 
-Gunakan file sampel data kotor yang telah disediakan untuk menguji fungsionalitas pemrosesan file:
+**Gemini (opsional)** (`backend/.env`)
+- `GEMINI_API_KEY=...`
+- `GEMINI_MODEL=gemini-1.5-flash`
 
-1. Buka browser dan arahkan ke halaman **[http://localhost:3000/upload](http://localhost:3000/upload)**.
-2. Seret (*drag and drop*) atau pilih file **`sample_customer_dirty_data.csv`** yang terletak di folder `/sample-data`.
-3. Klik tombol **"Unggah & Pratinjau CSV"**.
-4. Verifikasi bahwa sistem berhasil mendeteksi dan menampilkan:
-   - **Kartu Ringkasan**: Nama file, ukuran file, jumlah baris (10), dan jumlah kolom (6).
-   - **Tabel Statistik Kolom**: Menampilkan nama kolom, tipe data terdeteksi (`text`, `number`, `date`, `boolean`, `unknown`), serta jumlah sel kosong (*missing count*).
-   - **Tabel Pratinjau**: Grid data 10 baris lengkap dengan indikator sel bernilai `NULL` (berwarna merah redup).
-5. Klik tombol **"Lanjut ke Dashboard"** untuk masuk ke halaman dashboard placeholder.
+Catatan privasi: AI insight **tidak** mengirim dataset penuh ke Gemini. Yang dikirim hanya ringkasan statistik (skor, jumlah isu, top kolom, rekomendasi).
+
+## Sample Dataset
+Gunakan file berikut untuk demo:
+- `sample-data/sample_customer_dirty_data.csv`
+
+## Demo Guide
+Flow demo yang direkomendasikan:
+1. Buka homepage: `http://localhost:3000/`
+2. Buka Dashboard: `http://localhost:3000/dashboard`
+3. Upload `sample-data/sample_customer_dirty_data.csv`
+4. Klik **Analisis Data**
+5. Lihat skor + ringkasan isu + top kolom + tabel isu
+6. Buka Clean: `http://localhost:3000/clean`
+7. Klik **Dapatkan Rekomendasi Pembersihan**
+8. Pilih aksi → **Pratinjau Perbaikan Terpilih**
+9. Klik **Terapkan Perbaikan Terpilih**
+10. Klik **Unduh CSV Bersih**
+11. Buka Report: `http://localhost:3000/report`
+12. Upload CSV lagi → **Buat Laporan**
+
+Catatan: report page upload ulang karena belum ada database/persistence.
+
+## Competition Pitch
+**Problem**: data kotor menghasilkan laporan/analisis yang menyesatkan.  
+**Solution**: CleanSheet AI mendeteksi isu, menjelaskan risiko dengan AI (opsional), dan memberi pembersihan aman.  
+**Why it matters**: keputusan lebih akurat, mengurangi error operasional, meningkatkan kualitas laporan.  
+**Privacy-aware AI**: dataset penuh tidak dikirim ke Gemini, hanya ringkasan statistik.  
+**Impact**: membantu student/UMKM/ops teams memastikan data siap pakai.
+
+## Privacy-Aware AI Design
+- Tidak mengirim full dataset ke Gemini
+- Mengirim summary: `quality_score`, `issue_summary`, `top_problem_columns`, `recommended_actions`
+- Fallback otomatis jika `GEMINI_API_KEY` tidak diset
+
+## Known Limitations
+- MVP hanya mendukung file CSV (belum mendukung Excel).
+- File diproses di memori (tidak disimpan permanen).
+- Cleaned CSV disimpan sementara di memori backend saat runtime; jika backend restart, link download lama bisa 404.
+- Tidak ada login / sistem akun.
+- Tidak ada database / history analisis.
+- Report page self-contained (tidak menyimpan hasil halaman sebelumnya).
+- AI insight dibuat dari summary statistik saja, bukan full dataset.
+- PDF export belum tersedia.
+
+## Roadmap
+Lihat `docs/ROADMAP.md`.
+
+## QA & Demo Docs
+- Demo script: `docs/DEMO_SCRIPT.md`
+- QA checklist: `docs/QA_CHECKLIST.md`
+
+## Troubleshooting
+- Jika `npm run build` gagal `spawn EPERM` di Windows, biasanya terkait policy/antivirus yang memblokir proses spawn. Coba:
+  - Jalankan terminal sebagai Administrator
+  - Exclude folder project dari antivirus/Defender (sementara)
+  - Pastikan `node.exe` tidak diblokir
 
