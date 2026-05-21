@@ -1,16 +1,106 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Database,
+  FileText,
+  Lock,
+  ShieldAlert,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 import { getBackendHealth } from "@/lib/api";
 import { BackendHealth } from "@/lib/types";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { ArrowRight, CheckCircle2, ShieldAlert, Sparkles, Database, FileText } from "lucide-react";
 
-export default function Home() {
+const featureCards = [
+  {
+    title: "Duplicate Detection",
+    description: "Mendeteksi baris berulang dan data duplikat.",
+    icon: Database,
+  },
+  {
+    title: "Missing Value Detection",
+    description: "Mendeteksi nilai kosong dan placeholder seperti N/A atau NULL.",
+    icon: ShieldAlert,
+  },
+  {
+    title: "Whitespace Scanner",
+    description: "Menangkap spasi tersembunyi, tab, dan format teks berantakan.",
+    icon: CheckCircle2,
+  },
+  {
+    title: "Strange Character Detection",
+    description: "Mendeteksi emoji, encoding rusak, simbol non-printable, dan noise.",
+    icon: Sparkles,
+  },
+  {
+    title: "Email Validation",
+    description: "Menandai format email tidak valid pada kolom penting.",
+    icon: FileText,
+  },
+  {
+    title: "Indonesian Phone Validation",
+    description: "Memvalidasi nomor telepon Indonesia dan menandai format yang tidak konsisten.",
+    icon: Wand2,
+  },
+  {
+    title: "Quality Score",
+    description: "Memahami kesiapan dataset dengan skor 0–100.",
+    icon: Database,
+  },
+  {
+    title: "Gemini AI Insight",
+    description: "Ringkasan risiko dan prioritas perbaikan dengan bahasa sederhana.",
+    icon: Sparkles,
+  },
+  {
+    title: "Cleaning Preview",
+    description: "Melihat perubahan sebelum–sesudah sebelum menerapkan perbaikan.",
+    icon: ShieldAlert,
+  },
+  {
+    title: "Cleaned CSV Download",
+    description: "Mengunduh dataset yang sudah diperbaiki sebagai CSV baru.",
+    icon: FileText,
+  },
+];
+
+const howItWorks = [
+  {
+    step: "1",
+    title: "Upload CSV",
+    description: "Unggah file dan langsung lihat pratinjau baris dan kolom.",
+  },
+  {
+    step: "2",
+    title: "Analisis kualitas",
+    description: "Deteksi masalah tersembunyi dan dapatkan skor kesiapan.",
+  },
+  {
+    step: "3",
+    title: "Buat insight AI",
+    description: "Pahami hal yang paling penting dan alasannya.",
+  },
+  {
+    step: "4",
+    title: "Pratinjau perbaikan",
+    description: "Tinjau perubahan sebelum menerapkan cleaning actions.",
+  },
+  {
+    step: "5",
+    title: "Unduh CSV bersih",
+    description: "Ekspor CSV yang lebih baik untuk analisis.",
+  },
+];
+
+export default function HomePage() {
   const [health, setHealth] = useState<BackendHealth | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     async function checkHealth() {
@@ -26,103 +116,202 @@ export default function Home() {
         setLoading(false);
       }
     }
+
     checkHealth();
   }, []);
 
+  const statusText = useMemo(() => {
+    if (loading) return "Memeriksa backend…";
+    if (error) return "Backend tidak tersedia";
+    return health?.status === "ok" ? "Backend terhubung" : "Status backend tidak diketahui";
+  }, [error, health, loading]);
+
   return (
-    <div className="relative overflow-hidden py-12 sm:py-16 lg:py-24">
-      {/* Background Gradient Orbs */}
-      <div className="absolute top-0 left-1/2 -z-10 h-[600px] w-[1000px] -translate-x-1/2 [mask-image:radial-gradient(100%_100%_at_top_center,white,transparent)] opacity-40">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 blur-3xl" />
+    <div className="relative overflow-hidden">
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute -top-40 left-1/2 h-[620px] w-[1100px] -translate-x-1/2 rounded-full bg-gradient-to-r from-emerald-400/30 via-teal-400/20 to-sky-400/20 blur-3xl" />
+        <div className="absolute bottom-[-240px] right-[-240px] h-[520px] w-[520px] rounded-full bg-gradient-to-tr from-emerald-500/20 to-slate-500/10 blur-3xl" />
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
-        {/* API Health Status Badge */}
-        <div className="mb-6 animate-fade-in">
-          <StatusBadge health={health} loading={loading} error={error} />
+      <section className="mx-auto max-w-6xl px-4 pt-14 pb-14 sm:pt-16 sm:pb-20">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-5">
+            <StatusBadge health={health} loading={loading} error={error} />
+          </div>
+
+          <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white sm:text-5xl md:text-6xl">
+            CleanSheet <span className="text-emerald-500">AI</span>
+          </h1>
+          <p className="mt-4 text-xl font-semibold text-slate-800 dark:text-slate-100">
+            Pengecek kualitas data bertenaga AI untuk file CSV.
+          </p>
+          <p className="mt-4 max-w-2xl text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+            Unggah dataset Anda, deteksi masalah kualitas data tersembunyi, pahami risikonya lewat insight AI,
+            bersihkan data dengan aman, lalu unduh CSV yang lebih baik.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-colors"
+            >
+              Analisis Dataset
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+            <Link
+              href="/clean"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 px-6 py-3.5 text-sm font-semibold text-slate-800 hover:bg-white dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-900 transition-colors"
+            >
+              Bersihkan Dataset
+            </Link>
+          </div>
+
+          <div className="mt-8 text-xs text-slate-500 dark:text-slate-400">
+            <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 dark:border-slate-800 dark:bg-slate-900/60">
+              {statusText}
+            </span>
+          </div>
         </div>
+      </section>
 
-        {/* Hero Section */}
-        <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-5xl md:text-6xl">
-          CleanSheet <span className="text-emerald-500">AI</span>
-        </h1>
-        <p className="mt-4 text-xl font-semibold text-slate-800 dark:text-slate-100 max-w-2xl">
-          AI-Powered Data Quality Checker for CSV Files
-        </p>
-        <p className="mt-4 text-base text-slate-500 dark:text-slate-400 max-w-xl">
-          Unggah berkas CSV Anda, deteksi masalah kualitas data yang tersembunyi, pahami dampaknya dengan ringkasan AI, dan unduh data yang bersih dalam hitungan detik.
-        </p>
-
-        {/* CTA Buttons */}
-        <div className="mt-8 flex flex-wrap justify-center gap-4">
-          <Link
-            href="/upload"
-            className="flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:shadow-emerald-600/30 transition-all duration-200"
-          >
-            Mulai Unggah CSV
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <a
-            href="#features"
-            className="rounded-xl border border-slate-200/80 bg-white/50 px-6 py-3.5 text-sm font-semibold text-slate-700 hover:bg-white hover:text-slate-950 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:bg-slate-900 transition-all duration-200"
-          >
-            Pelajari Fitur
-          </a>
-        </div>
-
-        {/* Features Preview Section */}
-        <div id="features" className="mt-20 w-full max-w-5xl">
-          <div className="border-t border-slate-200/60 dark:border-slate-800/60 pt-16">
-            <h2 className="text-2xl font-bold text-slate-950 dark:text-white mb-2">
-              Mengapa Menggunakan CleanSheet AI?
+      <section className="mx-auto max-w-6xl px-4 pb-16">
+        <div className="grid gap-8 lg:grid-cols-2">
+          <div className="rounded-3xl border border-slate-200/70 bg-white/70 p-8 dark:border-slate-800/60 dark:bg-slate-900/50">
+            <h2 className="text-xl font-bold text-slate-950 dark:text-white">
+              Data yang berantakan menghasilkan keputusan yang tidak akurat.
             </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-10">
-              Ubah spreadsheet yang kotor menjadi data bersih yang siap digunakan untuk analisis.
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Banyak file CSV dan spreadsheet terlihat rapi, tapi menyimpan masalah tersembunyi seperti
+              duplikat, missing value, email tidak valid, nomor telepon tidak konsisten, spasi berlebih, dan
+              karakter aneh.
+            </p>
+            <ul className="mt-5 space-y-2 text-sm text-slate-700 dark:text-slate-200">
+              {[
+                "duplicate records",
+                "missing values",
+                "invalid emails",
+                "inconsistent phone numbers",
+                "extra spaces",
+                "strange characters",
+                "inconsistent formats",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200/70 bg-white/70 p-8 dark:border-slate-800/60 dark:bg-slate-900/50">
+            <h2 className="text-xl font-bold text-slate-950 dark:text-white">
+              Validasi dulu sebelum dipercaya.
+            </h2>
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              CleanSheet AI membantu pengguna memvalidasi kualitas data sebelum digunakan. Ia menggabungkan
+              pengecekan berbasis aturan dengan penjelasan bertenaga Gemini, sehingga pengguna non-teknis bisa
+              memahami apa yang salah, kenapa penting, dan apa yang harus diprioritaskan.
             </p>
 
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 text-left">
-              {/* Feature 1 */}
-              <div className="glow-card flex flex-col justify-between p-6 rounded-2xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900/50">
-                <div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 mb-4">
-                    <ShieldAlert className="h-6 w-6" />
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              {howItWorks.map((step) => (
+                <div
+                  key={step.step}
+                  className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950/30"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 font-semibold">
+                      {step.step}
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-950 dark:text-white">{step.title}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">{step.description}</p>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Detect Issues</h3>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Menemukan baris duplikat, nilai kosong (missing values), email tidak valid, format telepon tidak standar, karakter asing, serta whitespace bermasalah.
-                  </p>
                 </div>
-              </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
-              {/* Feature 2 */}
-              <div className="glow-card flex flex-col justify-between p-6 rounded-2xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900/50">
-                <div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 mb-4">
-                    <CheckCircle2 className="h-6 w-6" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Understand Quality</h3>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Dapatkan Data Quality Score secara keseluruhan untuk mengukur kelayakan dataset, lengkap dengan visualisasi kategori kesalahan berdasarkan tingkat keparahan (*severity*).
-                  </p>
-                </div>
-              </div>
+      <section id="features" className="mx-auto max-w-6xl px-4 pb-16">
+        <div className="flex items-end justify-between gap-6">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-950 dark:text-white">Feature highlights</h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              Alur demo siap lomba: analisis → jelaskan → bersihkan → ekspor.
+            </p>
+          </div>
+          <Link
+            href="/upload"
+            className="hidden sm:inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-white dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-900"
+          >
+            Mulai Unggah
+          </Link>
+        </div>
 
-              {/* Feature 3 */}
-              <div className="glow-card flex flex-col justify-between p-6 rounded-2xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900/50 sm:col-span-2 lg:col-span-1">
-                <div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 mb-4">
-                    <Sparkles className="h-6 w-6" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Clean Safely</h3>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Terapkan solusi pembersihan yang disarankan secara otomatis, periksa perbandingan sebelum-dan-sesudah, lalu unduh berkas CSV bersih Anda dengan aman.
-                  </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {featureCards.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <div
+                key={feature.title}
+                className="rounded-2xl border border-slate-200/70 bg-white/70 p-6 dark:border-slate-800/60 dark:bg-slate-900/50"
+              >
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                  <Icon className="h-5 w-5" />
                 </div>
+                <p className="mt-4 text-sm font-semibold text-slate-950 dark:text-white">{feature.title}</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{feature.description}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-20">
+        <div className="rounded-3xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50/70 via-white/70 to-slate-50/70 p-8 dark:border-emerald-900/30 dark:from-emerald-950/30 dark:via-slate-950/40 dark:to-slate-950/10">
+          <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/70 px-3 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-900/30 dark:bg-slate-950/40 dark:text-emerald-300">
+                <Lock className="h-3.5 w-3.5" />
+                Privasi jadi prioritas
+              </div>
+              <h2 className="mt-4 text-2xl font-bold text-slate-950 dark:text-white">
+                Insight Gemini tanpa mengirim dataset penuh.
+              </h2>
+              <p className="mt-3 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                CleanSheet AI tidak mengirim dataset penuh ke Gemini. AI insight dibuat dari ringkasan statistik
+                seperti jumlah isu, quality score, kolom paling bermasalah, dan rekomendasi aksi.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-6 dark:border-slate-800/60 dark:bg-slate-900/50">
+              <p className="text-sm font-semibold text-slate-950 dark:text-white">Siap untuk demo?</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                Coba alur lengkap dalam hitungan menit: analisis sample dataset, buat insight AI, bersihkan,
+                ekspor, lalu buat ringkasan laporan final.
+              </p>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-900 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100 transition-colors"
+                >
+                  Mulai Demo
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+                <Link
+                  href="/report"
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-900 transition-colors"
+                >
+                  Lihat Halaman Laporan
+                </Link>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

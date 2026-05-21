@@ -9,9 +9,9 @@ export default function DashboardLoadingState() {
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-300 mb-6">
         <Loader2 className="h-7 w-7 animate-spin" />
       </div>
-      <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Analyzing your dataset...</h2>
+      <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Menganalisis dataset…</h2>
       <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-        Checking duplicates, missing values, formatting issues, and invalid contacts.
+        Memeriksa duplikat, nilai kosong, masalah format, serta kontak yang tidak valid.
       </p>
     </div>
   );

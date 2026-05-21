@@ -85,7 +85,7 @@ export default function DashboardPage() {
 
           <div className="grid gap-8 lg:grid-cols-[1.4fr_0.9fr]">
             <IssueTable issues={analysis.issues} />
-            <IssueBreakdown summary={analysis.issue_summary} />
+          <IssueBreakdown summary={analysis.issue_summary} />
           </div>
 
           <div className="flex justify-end">
@@ -93,7 +93,7 @@ export default function DashboardPage() {
               href="/clean"
               className="inline-flex items-center justify-center rounded-3xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-slate-900/10 transition-colors hover:bg-slate-800"
             >
-              Continue to Cleaning
+              Lanjut ke Pembersihan
             </Link>
           </div>
         </div>

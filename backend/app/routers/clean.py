@@ -1,5 +1,6 @@
 import json
 import uuid
+import logging
 
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from fastapi.responses import StreamingResponse
@@ -9,6 +10,7 @@ from ..services import parser_service, quality_engine, cleaning_engine
 from ..services.file_store import save_cleaned_csv, get_cleaned_csv
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/preview", response_model=CleaningPreviewResponse)
@@ -121,8 +123,9 @@ async def cleaning_apply(
         if "Invalid selected cleaning action" in msg:
             raise HTTPException(status_code=400, detail="Invalid selected cleaning action.")
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Unable to apply cleaning actions.")
+    except Exception as e:
+        logger.exception("Unexpected error while applying cleaning actions")
+        raise HTTPException(status_code=500, detail="Internal error while applying cleaning actions.")
 
     original_name = file.filename or "dataset.csv"
     cleaned_file_name = f"cleaned_{original_name}"
@@ -130,7 +133,8 @@ async def cleaning_apply(
     try:
         csv_bytes = cleaning_engine.dataframe_to_csv_bytes(cleaned_df)
     except Exception:
-        raise HTTPException(status_code=400, detail="Unable to apply cleaning actions.")
+        logger.exception("Unexpected error while converting cleaned dataframe to CSV")
+        raise HTTPException(status_code=500, detail="Internal error while generating cleaned CSV.")
 
     download_id = save_cleaned_csv(csv_bytes, cleaned_file_name)
 

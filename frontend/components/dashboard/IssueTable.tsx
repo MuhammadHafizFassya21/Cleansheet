@@ -20,16 +20,23 @@ const typeOptions: (IssueType | "all")[] = [
 ];
 
 const severityLabel = (severity: IssueSeverity | "all") => {
-  if (severity === "all") return "All";
-  return severity.charAt(0).toUpperCase() + severity.slice(1);
+  if (severity === "all") return "Semua";
+  if (severity === "critical") return "Kritikal";
+  if (severity === "warning") return "Peringatan";
+  return "Info";
 };
 
 const typeLabel = (type: IssueType | "all") => {
-  if (type === "all") return "All";
-  return type
-    .split("_")
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ");
+  if (type === "all") return "Semua";
+  const map: Record<IssueType, string> = {
+    duplicate: "Duplikat",
+    missing_value: "Nilai kosong",
+    whitespace: "Whitespace",
+    strange_character: "Karakter aneh",
+    invalid_email: "Email tidak valid",
+    invalid_phone: "Telepon tidak valid",
+  };
+  return map[type];
 };
 
 const severityBadge = (severity: IssueSeverity) => {
@@ -66,14 +73,16 @@ export default function IssueTable({ issues }: IssueTableProps) {
     <div className="rounded-3xl border border-slate-200/80 bg-white/90 dark:border-slate-800 dark:bg-slate-950/80 p-5 shadow-sm">
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">Issue Table</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Filter and review issues by severity and type.</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Tabel Isu</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Filter dan tinjau isu berdasarkan tingkat keparahan dan tipe.
+          </p>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row">
           <label className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <Filter className="h-4 w-4" />
-            Severity:
+            Keparahan:
             <select
               value={severityFilter}
               onChange={(event) => setSeverityFilter(event.target.value as "all" | IssueSeverity)}
@@ -88,7 +97,7 @@ export default function IssueTable({ issues }: IssueTableProps) {
           </label>
           <label className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <ArrowUpDown className="h-4 w-4" />
-            Type:
+            Tipe:
             <select
               value={typeFilter}
               onChange={(event) => setTypeFilter(event.target.value as "all" | IssueType)}
@@ -108,20 +117,20 @@ export default function IssueTable({ issues }: IssueTableProps) {
         <table className="min-w-full text-left text-xs border-collapse">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 uppercase tracking-[0.16em]">
-              <th className="px-4 py-3">Severity</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Column</th>
-              <th className="px-4 py-3">Row</th>
-              <th className="px-4 py-3">Value</th>
-              <th className="px-4 py-3">Message</th>
-              <th className="px-4 py-3">Fix</th>
+              <th className="px-4 py-3">Keparahan</th>
+              <th className="px-4 py-3">Tipe</th>
+              <th className="px-4 py-3">Kolom</th>
+              <th className="px-4 py-3">Baris</th>
+              <th className="px-4 py-3">Nilai</th>
+              <th className="px-4 py-3">Pesan</th>
+              <th className="px-4 py-3">Saran</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 text-slate-700 dark:divide-slate-800 dark:text-slate-200">
             {filteredIssues.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                  No issues match the selected filters.
+                  Tidak ada isu yang cocok dengan filter yang dipilih.
                 </td>
               </tr>
             ) : (

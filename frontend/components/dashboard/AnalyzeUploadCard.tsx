@@ -28,9 +28,9 @@ export default function AnalyzeUploadCard({
           <Loader2 className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">Upload CSV for Analysis</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Unggah CSV untuk Analisis</p>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Drag and drop your CSV file or choose a file from your computer to begin the data quality check.
+            Seret dan letakkan CSV Anda, atau pilih file dari komputer untuk memulai pengecekan kualitas data.
           </p>
         </div>
       </div>
@@ -43,11 +43,11 @@ export default function AnalyzeUploadCard({
         <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
           {selectedFile ? (
             <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-              Selected: {selectedFile.name}
+              Dipilih: {selectedFile.name}
             </span>
           ) : (
             <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-              No file selected
+              Belum ada file
             </span>
           )}
         </div>
@@ -71,10 +71,10 @@ export default function AnalyzeUploadCard({
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing Data
+                Menganalisis data…
               </>
             ) : (
-              "Analyze Data"
+              "Analisis Data"
             )}
           </button>
         </div>

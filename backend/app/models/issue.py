@@ -39,6 +39,8 @@ class IssueSummary(BaseModel):
 
 class DataQualityAnalysisResponse(BaseModel):
     dataset_id: str
+    row_count: int | None = None
+    column_count: int | None = None
     quality_score: int
     status: str
     issue_summary: IssueSummary

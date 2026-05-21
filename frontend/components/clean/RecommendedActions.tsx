@@ -18,9 +18,9 @@ export default function RecommendedActions({
   return (
     <div className="rounded-3xl border border-slate-200/80 bg-white/90 dark:border-slate-800 dark:bg-slate-950/80 p-5 shadow-sm">
       <div className="mb-6">
-        <p className="text-sm font-semibold text-slate-900 dark:text-white">Recommended Actions</p>
+        <p className="text-sm font-semibold text-slate-900 dark:text-white">Rekomendasi Aksi</p>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Select cleaning actions to preview changes before applying.
+          Pilih aksi pembersihan untuk melihat pratinjau perubahan sebelum diterapkan.
         </p>
       </div>
 
@@ -48,21 +48,21 @@ export default function RecommendedActions({
 
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
                 <span className="text-slate-500 dark:text-slate-400">
-                  Affected cells: <span className="font-semibold">{action.affected_cells}</span>
+                  Sel terdampak: <span className="font-semibold">{action.affected_cells}</span>
                 </span>
                 <span className="text-slate-500 dark:text-slate-400">
-                  Affected rows: <span className="font-semibold">{action.affected_rows}</span>
+                  Baris terdampak: <span className="font-semibold">{action.affected_rows}</span>
                 </span>
                 <div className="flex items-center gap-1">
                   {action.safe_to_apply ? (
                     <>
                       <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                      <span className="font-semibold text-emerald-600">Safe</span>
+                      <span className="font-semibold text-emerald-600">Aman</span>
                     </>
                   ) : (
                     <>
                       <AlertCircle className="h-4 w-4 text-amber-600" />
-                      <span className="font-semibold text-amber-600">Review needed</span>
+                      <span className="font-semibold text-amber-600">Perlu ditinjau</span>
                     </>
                   )}
                 </div>

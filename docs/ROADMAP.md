@@ -28,24 +28,32 @@
 - Email validation
 - Phone validation
 
-## Phase 5 — Dashboard
+## Phase 5 — Dashboard UX
 - Data Quality Score
 - Issue summary cards
-- Charts
+- Charts and breakdown
 - Issue table
 - Severity labels
 
-## Phase 6 — AI Insight
-- Integrate Gemini API
-- Generate AI summary
-- Generate cleaning recommendations
+## Phase 6 — Cleaning Recommendations
+- Recommend cleaning actions
+- Before-after preview
+- Action selection UX
 
-## Phase 7 — Cleaning and Export
+## Phase 7 — Apply Cleaning and Export
 - Apply selected fixes
-- Show before-after preview
 - Download cleaned CSV
+- In-memory download storage
 
-## Phase 8 — Deployment
-- Deploy backend to Cloud Run
-- Deploy frontend
-- Prepare demo video
+## Phase 8 — Gemini AI Insight
+- Integrate Gemini API (optional)
+- Privacy-aware payload (no full dataset)
+- Fallback behavior without API key
+
+## Phase 9 — Report Page & Demo Polish
+- Landing page polished
+- Report page added (self-contained flow)
+- Demo guide added to README
+- Competition pitch section added
+- Navigation and layout consistency improvements
+

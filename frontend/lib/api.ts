@@ -131,6 +131,20 @@ export async function applyCleaningActions(
   return response.json();
 }
 
+export async function generateAIInsight(payload: any) {
+  const response = await fetch(`${API_BASE_URL}/api/ai/insight`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to generate AI insight."));
+  }
+
+  return response.json();
+}
+
 export function getCleanedCsvDownloadUrl(downloadId: string) {
   return `${API_BASE_URL}/api/clean/download/${downloadId}`;
 }

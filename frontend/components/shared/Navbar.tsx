@@ -3,16 +3,17 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, Upload, LayoutDashboard, Sparkles, HelpCircle } from "lucide-react";
+import { FileSpreadsheet, Upload, LayoutDashboard, Sparkles, FileText } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: "Beranda", path: "/", icon: FileSpreadsheet },
-    { name: "Upload CSV", path: "/upload", icon: Upload },
-    { name: "Dashboard Kualitas", path: "/dashboard", icon: LayoutDashboard },
-    { name: "Bersihkan Data", path: "/clean", icon: Sparkles },
+    { name: "Home", path: "/", icon: FileSpreadsheet },
+    { name: "Upload", path: "/upload", icon: Upload },
+    { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+    { name: "Clean", path: "/clean", icon: Sparkles },
+    { name: "Report", path: "/report", icon: FileText },
   ];
 
   return (
@@ -25,7 +26,7 @@ export default function Navbar() {
           </div>
           <div>
             <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-              CleanSheet<span className="text-emerald-500">.AI</span>
+              CleanSheet<span className="text-emerald-500">AI</span>
             </span>
           </div>
         </Link>
@@ -60,7 +61,7 @@ export default function Navbar() {
             rel="noopener noreferrer"
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs text-slate-500 hover:text-slate-950 dark:hover:text-white transition-colors duration-200"
           >
-            <span>GitHub Repo</span>
+            <span>Repositori GitHub</span>
           </a>
         </div>
       </div>

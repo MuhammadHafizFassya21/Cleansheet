@@ -17,7 +17,7 @@ export default function CleaningSummaryCard({ summary }: CleaningSummaryCardProp
         </div>
         <div>
           <p className="text-sm font-semibold text-slate-900 dark:text-white">
-            Cleaning completed
+            Pembersihan selesai
           </p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {summary.cleaned_file_name}
@@ -28,7 +28,7 @@ export default function CleaningSummaryCard({ summary }: CleaningSummaryCardProp
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-            Original rows
+            Baris awal
           </p>
           <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
             {summary.original_row_count}
@@ -37,7 +37,7 @@ export default function CleaningSummaryCard({ summary }: CleaningSummaryCardProp
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-            Cleaned rows
+            Baris setelah
           </p>
           <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
             {summary.cleaned_row_count}
@@ -46,7 +46,7 @@ export default function CleaningSummaryCard({ summary }: CleaningSummaryCardProp
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-            Rows removed
+            Baris dihapus
           </p>
           <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
             {summary.rows_removed}
@@ -55,7 +55,7 @@ export default function CleaningSummaryCard({ summary }: CleaningSummaryCardProp
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-            Cells modified
+            Sel diubah
           </p>
           <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
             {summary.cells_modified}
@@ -65,7 +65,7 @@ export default function CleaningSummaryCard({ summary }: CleaningSummaryCardProp
 
       <div className="mt-4">
         <p className="text-xs font-semibold text-slate-900 dark:text-white">
-          Actions applied:
+          Aksi diterapkan:
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
           {summary.actions_applied.map((actionId) => (
@@ -84,16 +84,16 @@ export default function CleaningSummaryCard({ summary }: CleaningSummaryCardProp
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <div className="text-xs text-slate-500 dark:text-slate-400">
-          Download ready:{" "}
+          Siap diunduh:{" "}
           <span className="font-semibold text-slate-900 dark:text-white">
-            {summary.download_ready ? "Yes" : "No"}
+            {summary.download_ready ? "Ya" : "Tidak"}
           </span>
         </div>
 
         <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <Download className="h-4 w-4" />
           <span className="font-semibold text-slate-900 dark:text-white">
-            {summary.download_ready ? "Available" : "Apply to enable"}
+            {summary.download_ready ? "Tersedia" : "Terapkan agar aktif"}
           </span>
         </div>
       </div>

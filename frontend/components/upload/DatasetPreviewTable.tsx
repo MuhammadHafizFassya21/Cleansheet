@@ -11,9 +11,9 @@ interface DatasetPreviewTableProps {
 export default function DatasetPreviewTable({ dataset }: DatasetPreviewTableProps) {
   // Utility for clean file size display
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
+    if (bytes === 0) return "0 Byte";
     const k = 1024;
-    const sizes = ["Bytes", "KB", "MB"];
+    const sizes = ["Byte", "KB", "MB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
@@ -108,8 +108,8 @@ export default function DatasetPreviewTable({ dataset }: DatasetPreviewTableProp
                 <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/80 text-slate-400 font-bold uppercase tracking-wider">
                   <th className="px-6 py-3.5">Nama Kolom</th>
                   <th className="px-6 py-3.5">Tipe Terdeteksi</th>
-                  <th className="px-6 py-3.5">Missing Values</th>
-                  <th className="px-6 py-3.5">Unique Values</th>
+                  <th className="px-6 py-3.5">Nilai Kosong</th>
+                  <th className="px-6 py-3.5">Nilai Unik</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-600 dark:text-slate-350">
@@ -172,7 +172,7 @@ export default function DatasetPreviewTable({ dataset }: DatasetPreviewTableProp
                             <span className="text-rose-400/70 italic bg-rose-50/20 dark:bg-rose-950/10 px-1.5 py-0.5 rounded">NULL</span>
                           ) : typeof cellVal === "boolean" ? (
                             <span className="text-purple-600 dark:text-purple-400 font-semibold">
-                              {cellVal ? "TRUE" : "FALSE"}
+                              {cellVal ? "BENAR" : "SALAH"}
                             </span>
                           ) : (
                             String(cellVal)

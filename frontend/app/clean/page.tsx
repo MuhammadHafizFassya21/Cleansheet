@@ -58,7 +58,7 @@ export default function CleanPage() {
       setSelectedActions([]);
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || "Unable to generate cleaning preview.");
+      setError(err?.message || "Tidak dapat membuat pratinjau pembersihan.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export default function CleanPage() {
       setPreview(result);
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || "Unable to generate cleaning preview.");
+      setError(err?.message || "Tidak dapat membuat pratinjau pembersihan.");
     } finally {
       setPreviewLoading(false);
     }
@@ -129,10 +129,10 @@ export default function CleanPage() {
                 {previewLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating Preview
+                    Membuat pratinjau…
                   </>
                 ) : (
-                  "Preview Selected Fixes"
+                  "Pratinjau Perbaikan Terpilih"
                 )}
               </button>
             </div>
@@ -159,7 +159,7 @@ export default function CleanPage() {
                     setApplyResult(result);
                   } catch (err: any) {
                     console.error(err);
-                    setApplyError(err?.message || "Unable to apply cleaning actions.");
+                    setApplyError(err?.message || "Tidak dapat menerapkan aksi pembersihan.");
                   } finally {
                     setApplyLoading(false);
                   }
@@ -170,10 +170,10 @@ export default function CleanPage() {
                 {applyLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Applying Fixes
+                    Menerapkan perbaikan…
                   </>
                 ) : (
-                  "Apply Selected Fixes"
+                  "Terapkan Perbaikan Terpilih"
                 )}
               </button>
             </div>
@@ -195,7 +195,7 @@ export default function CleanPage() {
                     !downloadUrl ? "opacity-50 pointer-events-none" : ""
                   }`}
                 >
-                  Download Cleaned CSV
+                  Unduh CSV Bersih
                 </a>
               </div>
             </>

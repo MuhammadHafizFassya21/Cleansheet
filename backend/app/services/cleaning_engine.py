@@ -319,7 +319,8 @@ def _normalize_missing_placeholder_to_empty(val: Any) -> Any:
         "none",
     }
 
-    # Keep NaN as None (will be serialized to empty string by our CSV converter)
+    # Note: for non-object columns (e.g. float), assigning "" will raise.
+    # Callers should decide whether to turn missing values into "".
     if val is None:
         return ""
 
@@ -396,22 +397,25 @@ def apply_standardize_missing_values(df: pd.DataFrame) -> int:
     cells_modified = 0
 
     for col in df.columns:
-        for idx, val in df[col].items():
+        series = df[col]
+        is_object_like = series.dtype == "object" or pd.api.types.is_string_dtype(series.dtype)
+
+        for idx, val in series.items():
+            # For numeric/date columns, keep missing values as-is (NaN/NaT),
+            # because assigning "" would raise (e.g. float64).
+            if not is_object_like and (val is None or pd.isna(val)):
+                continue
+
             new_val = _normalize_missing_placeholder_to_empty(val)
-            # If it's unchanged (including cases where original already empty string)
             if new_val == val:
                 continue
 
-            # Normalize NaN-like -> empty string
-            if (val is None) or pd.isna(val):
-                if new_val != "":
-                    df.at[idx, col] = new_val
-                else:
-                    df.at[idx, col] = ""
-                cells_modified += 1
+            if not is_object_like and new_val == "":
+                # For non-object columns, represent standardized "missing" as NA instead of "".
+                df.at[idx, col] = pd.NA
             else:
                 df.at[idx, col] = new_val
-                cells_modified += 1
+            cells_modified += 1
 
     return cells_modified
 

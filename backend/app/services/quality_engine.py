@@ -317,6 +317,8 @@ def analyze_dataframe(df: pd.DataFrame, dataset_id: str) -> DataQualityAnalysisR
 
     return DataQualityAnalysisResponse(
         dataset_id=dataset_id,
+        row_count=int(len(df)),
+        column_count=int(len(df.columns)),
         quality_score=quality_score,
         status=status,
         issue_summary=issue_summary,

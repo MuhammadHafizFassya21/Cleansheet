@@ -92,6 +92,51 @@ AI insight akan menggunakan Gemini **jika variabel berikut di-set**. Jika tidak 
 - `GEMINI_API_KEY`=your_gemini_api_key_here
 - `GEMINI_MODEL`=gemini-1.5-flash
 
+---
+
+## Demo Guide (Phase 9)
+Demo flow yang direkomendasikan (untuk kompetisi / presentasi):
+
+1. Open homepage: `http://localhost:3000/`
+2. Go to Dashboard: `http://localhost:3000/dashboard`
+3. Upload `sample-data/sample_customer_dirty_data.csv`
+4. Click **Analyze** untuk melihat quality score + issue list
+5. (Opsional) Generate AI Insight di dashboard (jika tersedia) atau lanjut ke report page untuk AI insight
+6. Go to Clean page: `http://localhost:3000/clean`
+7. Click **Get Cleaning Recommendations**
+8. Select actions → **Preview Selected Fixes**
+9. Click **Apply Selected Fixes**
+10. Download cleaned CSV
+11. Open Report page: `http://localhost:3000/report`
+12. Upload CSV lagi → **Generate Report** untuk report-style final summary
+
+Catatan: report page upload ulang karena belum ada database / global persistence.
+
+---
+
+## Competition Pitch (Phase 9)
+
+**Problem**
+- CSV/spreadsheet sering terlihat rapi, tapi punya masalah tersembunyi (duplikat, missing value, invalid email/phone, whitespace, karakter aneh) yang membuat keputusan/analisis jadi salah.
+
+**Solution**
+- CleanSheet AI menggabungkan rule-based quality checks + Gemini-powered insight untuk menjelaskan apa yang salah, dampaknya, dan prioritas perbaikan, lalu memberi rekomendasi cleaning yang aman.
+
+**Target Users**
+- Student & researcher, UMKM, school admin, ops teams, dan pemula data analyst.
+
+**Why it matters**
+- Data yang buruk menghasilkan metrik yang menyesatkan, biaya operasional meningkat, dan keputusan menjadi tidak akurat.
+
+**Gemini usage**
+- Dipakai untuk menghasilkan ringkasan dan prioritas perbaikan yang mudah dipahami non-teknis.
+
+**Privacy-aware AI design**
+- CleanSheet AI tidak mengirim full dataset ke Gemini. AI insight hanya memakai ringkasan statistik (quality score, issue counts, top problem columns, rekomendasi action).
+
+**Impact**
+- Membantu user memastikan dataset “siap pakai” sebelum dipakai untuk laporan, forecasting, atau model ML sederhana.
+
 ## Tech Stack
 - **Frontend**: Next.js 15, TypeScript, Tailwind CSS v4
 - **Backend**: FastAPI (Python), Pandas

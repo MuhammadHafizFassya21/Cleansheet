@@ -9,9 +9,11 @@ export default function CleaningLoadingState() {
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-300 mb-6">
         <Loader2 className="h-7 w-7 animate-spin" />
       </div>
-      <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Preparing cleaning recommendations...</h2>
+      <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
+        Menyiapkan rekomendasi pembersihan…
+      </h2>
       <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-        Analyzing your dataset and generating safe cleaning actions.
+        Menganalisis dataset dan menyusun aksi pembersihan yang aman.
       </p>
     </div>
   );

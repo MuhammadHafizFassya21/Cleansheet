@@ -56,6 +56,8 @@ export type IssueSummary = {
 
 export type DataQualityAnalysisResponse = {
   dataset_id: string;
+  row_count?: number;
+  column_count?: number;
   quality_score: number;
   status: string;
   issue_summary: IssueSummary;
@@ -123,4 +125,3 @@ export type CleaningApplyResponse = {
   download_ready: boolean;
   download_id: string;
 };
-
