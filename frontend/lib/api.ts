@@ -167,6 +167,18 @@ export async function getManualReviewIssues(file: File) {
   return response.json();
 }
 
+export async function getCsvFileFromCleanDownloadId(cleanDownloadId: string): Promise<File> {
+  const res = await fetch(getCleanedCsvDownloadUrl(cleanDownloadId));
+  if (!res.ok) {
+    throw new Error(await getErrorMessage(res, "Unable to fetch cleaned CSV."));
+  }
+
+  const blob = await res.blob();
+  const fileName = `cleaned_${cleanDownloadId}.csv`;
+  return new File([blob], fileName, { type: "text/csv" });
+}
+
+
 export async function validateManualValue(payload: {
   row_index: number;
   column: string;

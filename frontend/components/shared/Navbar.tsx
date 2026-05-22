@@ -13,6 +13,7 @@ export default function Navbar() {
     { name: "Upload", path: "/upload", icon: Upload },
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { name: "Clean", path: "/clean", icon: Sparkles },
+    { name: "Manual Review", path: "/manual-review", icon: Sparkles },
     { name: "Report", path: "/report", icon: FileText },
   ];
 

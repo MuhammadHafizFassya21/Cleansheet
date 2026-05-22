@@ -15,6 +15,9 @@ import IssueTable from "@/components/dashboard/IssueTable";
 import TopProblemColumns from "@/components/dashboard/TopProblemColumns";
 import IssueBreakdown from "@/components/dashboard/IssueBreakdown";
 
+import ManualReviewNotice from "@/components/manual-review/ManualReviewNotice";
+
+
 export default function DashboardPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [analysis, setAnalysis] = useState<DataQualityAnalysisResponse | null>(null);
@@ -85,8 +88,32 @@ export default function DashboardPage() {
 
           <div className="grid gap-8 lg:grid-cols-[1.4fr_0.9fr]">
             <IssueTable issues={analysis.issues} />
-          <IssueBreakdown summary={analysis.issue_summary} />
+            <IssueBreakdown summary={analysis.issue_summary} />
           </div>
+
+          {(
+            analysis.issue_summary.invalid_email_count > 0 ||
+            analysis.issue_summary.invalid_phone_count > 0 ||
+            analysis.issue_summary.suspicious_negative_number_count > 0 ||
+            analysis.issue_summary.strange_character_count > 0
+          ) && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+              <div className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                Manual review required
+              </div>
+              <div className="mt-1 text-sm text-amber-900/80 dark:text-amber-100/80">
+                Some issues cannot be safely fixed automatically. Review invalid emails, invalid phone numbers, suspicious negative values, or strange characters manually.
+              </div>
+              <div className="mt-4">
+                <Link
+                  href="/manual-review"
+                  className="inline-flex items-center justify-center rounded-xl bg-amber-600 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-700"
+                >
+                  Review &amp; Fix Manually
+                </Link>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end">
             <Link

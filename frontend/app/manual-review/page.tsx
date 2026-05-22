@@ -1,14 +1,17 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+
 import { Loader2 } from "lucide-react";
 
 import {
   applyManualReviewFixes,
+  getCsvFileFromCleanDownloadId,
   getManualReviewDownloadUrl,
   getManualReviewIssues,
   validateManualValue,
 } from "@/lib/api";
+
 import {
   ManualEditRequest,
   ManualReviewApplyResponse,
@@ -24,7 +27,11 @@ import ManualReviewEmptyState from "@/components/manual-review/ManualReviewEmpty
 import ManualReviewSummary from "@/components/manual-review/ManualReviewSummary";
 
 export default function ManualReviewPage() {
+  // Accept clean output context: /manual-review?clean_download_id=clean_xxx
+  const [cleanDownloadId, setCleanDownloadId] = useState<string | null>(null);
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const [issues, setIssues] = useState<ManualReviewIssue[]>([]);
 
   const [loading, setLoading] = useState(false);

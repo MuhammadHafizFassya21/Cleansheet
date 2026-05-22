@@ -16,6 +16,7 @@ import CleaningErrorState from "@/components/clean/CleaningErrorState";
 import RecommendedActions from "@/components/clean/RecommendedActions";
 import BeforeAfterPreviewTable from "@/components/clean/BeforeAfterPreviewTable";
 import CleaningSummaryCard from "@/components/clean/CleaningSummaryCard";
+import Link from "next/link";
 
 export default function CleanPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -113,6 +114,23 @@ export default function CleanPage() {
         <CleaningEmptyState />
       ) : (
         <div className="space-y-8">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+            <div className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+              Manual review required
+            </div>
+            <div className="mt-1 text-sm text-amber-900/80 dark:text-amber-100/80">
+              Some issues cannot be safely fixed automatically. Review invalid emails, invalid phone numbers, suspicious negative values, or strange characters manually.
+            </div>
+            <div className="mt-4">
+              <Link
+                href="/manual-review"
+                className="inline-flex items-center justify-center rounded-xl bg-amber-600 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-700"
+              >
+                Review &amp; Fix Manually
+              </Link>
+            </div>
+          </div>
+
           <RecommendedActions
             actions={preview.recommended_actions}
             selectedActions={selectedActions}
@@ -197,6 +215,13 @@ export default function CleanPage() {
                 >
                   Unduh CSV Bersih
                 </a>
+
+                <Link
+                  href="/manual-review"
+                  className="inline-flex items-center justify-center rounded-3xl bg-amber-600 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-700"
+                >
+                  Perbaiki data manual
+                </Link>
               </div>
             </>
           )}

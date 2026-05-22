@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import ManualReviewSummary from "./ManualReviewSummary";
 import { ManualReviewIssue, ManualValidationResult } from "@/lib/types";
 
 export default function ManualEditCard({
@@ -28,9 +27,7 @@ export default function ManualEditCard({
       <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-sm font-semibold text-slate-900 dark:text-white">
-              {issue.type}
-            </div>
+            <div className="text-sm font-semibold text-slate-900 dark:text-white">{issue.type}</div>
             <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Severity: {issue.severity} • Row: {issue.row_index} • Column: {issue.column}
             </div>
