@@ -148,3 +148,68 @@ export async function generateAIInsight(payload: any) {
 export function getCleanedCsvDownloadUrl(downloadId: string) {
   return `${API_BASE_URL}/api/clean/download/${downloadId}`;
 }
+
+// ---------- Manual Review (Phase 11.6) ----------
+
+export async function getManualReviewIssues(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}/api/manual-review/issues`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to find manual review issues."));
+  }
+
+  return response.json();
+}
+
+export async function validateManualValue(payload: {
+  row_index: number;
+  column: string;
+  value: string;
+  issue_type: string;
+}) {
+  const response = await fetch(`${API_BASE_URL}/api/manual-review/validate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to validate value."));
+  }
+
+  return response.json();
+}
+
+export async function applyManualReviewFixes(
+  file: File,
+  edits: { row_index: number; column: string; new_value: string }[],
+  markedValidIssues: string[]
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("edits", JSON.stringify(edits));
+  formData.append("marked_valid_issues", JSON.stringify(markedValidIssues));
+
+  const response = await fetch(`${API_BASE_URL}/api/manual-review/apply`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to apply manual fixes."));
+  }
+
+  return response.json();
+}
+
+// Uses the same in-memory download endpoint as clean/download
+export function getManualReviewDownloadUrl(downloadId: string) {
+  return getCleanedCsvDownloadUrl(downloadId);
+}
+

@@ -127,3 +127,43 @@ export type CleaningApplyResponse = {
   download_ready: boolean;
   download_id: string;
 };
+
+// ---------- Manual Review (Phase 11.6) ----------
+
+export type ManualReviewIssue = {
+  id: string;
+  type: "invalid_email" | "invalid_phone" | "suspicious_negative_number";
+  severity: "critical" | "warning" | "info" | string;
+  row_index: number;
+  column: string;
+  current_value: string | null;
+  message: string;
+  recommendation: string;
+  review_status: "pending" | "fixed" | "marked_valid";
+};
+
+export type ManualEditRequest = {
+  row_index: number;
+  column: string;
+  new_value: string;
+};
+
+export type ManualValidationResult = {
+  row_index: number;
+  column: string;
+  value: string | null;
+  is_valid: boolean;
+  issue_type: "invalid_email" | "invalid_phone" | "suspicious_negative_number" | null;
+  message: string;
+};
+
+export type ManualReviewApplyResponse = {
+  dataset_id: string;
+  total_review_issues: number;
+  fixed_count: number;
+  marked_valid_count: number;
+  remaining_issues_count: number;
+  download_id: string | null;
+  download_ready: boolean;
+};
+

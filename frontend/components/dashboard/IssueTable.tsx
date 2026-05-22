@@ -7,6 +7,7 @@ import { Filter, ArrowUpDown } from "lucide-react";
 interface IssueTableProps {
   issues: DataQualityIssue[];
 }
+
 const severityBadge = (severity: IssueSeverity) => {
   if (severity === "critical") return "bg-rose-100 text-rose-700";
   if (severity === "warning") return "bg-amber-100 text-amber-700";
@@ -26,9 +27,39 @@ const typeBadge = (type: IssueType) => {
   return map[type];
 };
 
+const severityOptions: IssueSeverity[] = ["critical", "warning", "info"];
+const typeOptions: IssueType[] = [
+  "duplicate",
+  "missing_value",
+  "whitespace",
+  "strange_character",
+  "invalid_email",
+  "invalid_phone",
+  "suspicious_negative_number",
+];
+
+const severityLabel = (severity: IssueSeverity | "all") => {
+  if (severity === "critical") return "Critical";
+  if (severity === "warning") return "Warning";
+  if (severity === "info") return "Info";
+  return "All";
+};
+
+const typeLabel = (type: IssueType | "all") => {
+  if (type === "duplicate") return "Duplicate";
+  if (type === "missing_value") return "Missing Value";
+  if (type === "whitespace") return "Whitespace";
+  if (type === "strange_character") return "Strange Character";
+  if (type === "invalid_email") return "Invalid Email";
+  if (type === "invalid_phone") return "Invalid Phone";
+  if (type === "suspicious_negative_number") return "Suspicious Negative";
+  return "All";
+};
+
 export default function IssueTable({ issues }: IssueTableProps) {
   const [severityFilter, setSeverityFilter] = useState<"all" | IssueSeverity>("all");
   const [typeFilter, setTypeFilter] = useState<"all" | IssueType>("all");
+
 
   const filteredIssues = useMemo(() => {
     return issues.filter((issue) => {

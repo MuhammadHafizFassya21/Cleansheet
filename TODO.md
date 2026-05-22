@@ -1,29 +1,17 @@
-# TODO — Phase 7 (Apply Cleaning & Download Cleaned CSV)
+# TODO - Phase 11.6 Manual Review & Inline Data Editor
 
-## Backend
-- [x] Update `backend/app/models/cleaning.py` with `CleaningApplyResponse` and `CleaningSummary`
-- [x] Implement cleaning functions + apply metrics in `backend/app/services/cleaning_engine.py`
-- [x] Add in-memory file store `backend/app/services/file_store.py`
-- [x] Add endpoints in `backend/app/routers/clean.py`
-  - [x] POST `/api/clean/apply`
-  - [x] GET `/api/clean/download/{download_id}`
+- [x] Step 1: Backend models: add `backend/app/models/manual_review.py` (Pydantic models)
+- [x] Step 2: Backend service: add `backend/app/services/manual_review_service.py` (issue filtering, edits/apply, validation, CSV generation)
+- [x] Step 3: Backend router: add `backend/app/routers/manual_review.py` with 3 endpoints
+- [x] Step 4: Backend register router in `backend/app/main.py`
 
-## Frontend
-- [x] Add API calls in `frontend/lib/api.ts`:
-  - [x] `applyCleaningActions`
-  - [x] `getCleanedCsvDownloadUrl`
-- [x] Add types in `frontend/lib/types.ts`:
-  - [x] `CleaningApplyResponse`
-- [x] Update UI in `frontend/app/clean/page.tsx`:
-  - [x] Button “Apply Selected Fixes”
-  - [x] Loading/apply error state
-  - [x] Show cleaning summary after apply
-  - [x] Enable “Download Cleaned CSV” after apply
-- [x] Create `frontend/components/clean/CleaningSummaryCard.tsx`
+- [ ] Step 5: Frontend: add `frontend/app/manual-review/page.tsx` implementing upload, queue, edit/validate, apply, download
+- [ ] Step 6: Frontend components under `frontend/components/manual-review/*`
+- [ ] Step 7: Frontend API client updates in `frontend/lib/api.ts`
+- [ ] Step 8: Frontend types updates in `frontend/lib/types.ts`
+- [ ] Step 9: Update navbar to include Manual Review
+- [ ] Step 10: Add link/button from Clean page to Manual Review (only when manual-review eligible issues exist)
+- [ ] Step 11: Optional: Dashboard CTA for manual-review eligible issues
+- [ ] Step 12: Update README.md, docs/FLOW_DIAGRAM.md, docs/DATA_QUALITY_RULES.md, docs/QA_CHECKLIST.md
+- [ ] Step 13: Run backend/frontend and test with `backend/test_data.csv`
 
-## Docs
-- [ ] Update `README.md` with Phase 7 testing instructions
-
-## Validation
-- [ ] Run backend + frontend locally and test full flow using `sample-data/sample_customer_dirty_data.csv`
-- [ ] Verify download returns `text/csv` and correct Content-Disposition filename
