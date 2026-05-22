@@ -1,5 +1,7 @@
 import re
 import pandas as pd
+import re
+import pandas as pd
 from typing import Any
 
 from ..models.cleaning import CleaningAction, CleaningPreviewChange
@@ -17,10 +19,37 @@ _PHONE_LIKE_COL_SUBSTRINGS = [
     "wa",
 ]
 
+EMOJI_REGEX = re.compile(
+    r"[\U0001F300-\U0001F5FF\U0001F600-\U0001F64F\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]"
+)
+CONTROL_CHAR_REGEX = re.compile(r"[\x00-\x1F\x7F-\x9F]")
+REPEATED_SYMBOL_REGEX = re.compile(r"([@#!\*&%])\1+")
+
 
 def is_phone_like_column(column_name: str) -> bool:
     name = (column_name or "").strip().lower()
     return any(substr in name for substr in _PHONE_LIKE_COL_SUBSTRINGS)
+
+
+def is_email_like_column(column_name: str) -> bool:
+    name = (column_name or "").strip().lower()
+    return any(substr in name for substr in ["email", "mail", "e-mail"])
+
+
+def is_url_like_column(column_name: str) -> bool:
+    name = (column_name or "").strip().lower()
+    return any(substr in name for substr in ["url", "link", "website", "web"])
+
+
+def _remove_strange_characters(val: str) -> str:
+    cleaned = EMOJI_REGEX.sub("", val)
+    cleaned = CONTROL_CHAR_REGEX.sub("", cleaned)
+    cleaned = REPEATED_SYMBOL_REGEX.sub("", cleaned)
+    cleaned = cleaned.replace("", "")
+    cleaned = "".join(ch for ch in cleaned if ch.isprintable())
+    # trim double spaces if any appeared due to symbol removal
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
 
 
 def normalize_indonesian_phone(value: str) -> str | None:
@@ -96,8 +125,8 @@ def get_cleaning_recommendations(
         recommendations.append(
             CleaningAction(
                 id="trim_whitespace",
-                label="Trim extra spaces",
-                description="Remove leading, trailing, and repeated spaces from text values.",
+                label="Hapus spasi berlebih",
+                description="Menghapus spasi di awal, di akhir, dan spasi ganda dari nilai teks.",
                 issue_types=["whitespace"],
                 affected_cells=affected_cells,
                 affected_rows=affected_rows,
@@ -114,8 +143,8 @@ def get_cleaning_recommendations(
         recommendations.append(
             CleaningAction(
                 id="normalize_phone",
-                label="Normalize Indonesian phone numbers",
-                description="Convert valid Indonesian phone numbers into a consistent 62xxxxxxxx format.",
+                label="Normalkan nomor telepon Indonesia",
+                description="Mengubah nomor telepon Indonesia yang valid menjadi format 62xxxxxxxx yang seragam.",
                 issue_types=["invalid_phone"],
                 affected_cells=affected_cells,
                 affected_rows=affected_rows,
@@ -132,8 +161,8 @@ def get_cleaning_recommendations(
         recommendations.append(
             CleaningAction(
                 id="remove_duplicates",
-                label="Remove duplicate rows",
-                description="Remove fully duplicated rows while keeping the first occurrence.",
+                label="Hapus baris duplikat",
+                description="Menghapus baris yang sepenuhnya duplikat dengan mempertahankan kemunculan pertama.",
                 issue_types=["duplicate"],
                 affected_cells=affected_cells,
                 affected_rows=affected_rows,
@@ -150,12 +179,30 @@ def get_cleaning_recommendations(
         recommendations.append(
             CleaningAction(
                 id="standardize_missing_values",
-                label="Standardize missing values",
-                description="Convert placeholders such as N/A, NULL, -, unknown, and none into empty values.",
+                label="Standarkan nilai kosong",
+                description="Mengubah placeholder seperti N/A, NULL, -, unknown, dan none menjadi nilai kosong.",
                 issue_types=["missing_value"],
                 affected_cells=affected_cells,
                 affected_rows=affected_rows,
                 safe_to_apply=True,
+            )
+        )
+
+    # Remove strange characters
+    if "strange_character" in issue_types_present:
+        affected_cells = len([i for i in issues if i.type == "strange_character"])
+        affected_rows = len(
+            set(i.row_index for i in issues if i.type == "strange_character" and i.row_index is not None)
+        )
+        recommendations.append(
+            CleaningAction(
+                id="remove_strange_characters",
+                label="Hapus karakter aneh",
+                description="Menghapus simbol tak lazim, emoji, dan karakter yang tak dapat dicetak dari teks.",
+                issue_types=["strange_character"],
+                affected_cells=affected_cells,
+                affected_rows=affected_rows,
+                safe_to_apply=False,
             )
         )
 
@@ -184,7 +231,7 @@ def trim_whitespace_preview(df: pd.DataFrame, limit: int = 100) -> tuple[list[Cl
                                 original_value=val,
                                 cleaned_value=trimmed,
                                 action_id="trim_whitespace",
-                                message="Whitespace will be normalized.",
+                                message="Spasi akan dinormalkan.",
                             )
                         )
 
@@ -213,7 +260,7 @@ def normalize_phone_preview(df: pd.DataFrame, limit: int = 100) -> tuple[list[Cl
                                 original_value=val,
                                 cleaned_value=normalized,
                                 action_id="normalize_phone",
-                                message="Phone number will be normalized to Indonesian 62 format.",
+                                message="Nomor telepon akan dinormalkan ke format 62 Indonesia.",
                             )
                         )
 
@@ -239,7 +286,7 @@ def remove_duplicates_preview(df: pd.DataFrame, limit: int = 100) -> tuple[list[
                 original_value=None,
                 cleaned_value=None,
                 action_id="remove_duplicates",
-                message="Duplicate row will be removed.",
+                message="Baris duplikat akan dihapus.",
             )
         )
 
@@ -267,9 +314,42 @@ def standardize_missing_values_preview(df: pd.DataFrame, limit: int = 100) -> tu
                             original_value=val,
                             cleaned_value=None,
                             action_id="standardize_missing_values",
-                            message="Missing value placeholder will be standardized.",
+                            message="Placeholder nilai kosong akan distandarkan.",
                         )
                     )
+
+    return changes, total_count
+
+
+def remove_strange_characters_preview(df: pd.DataFrame, limit: int = 100) -> tuple[list[CleaningPreviewChange], int]:
+    """
+    Generate preview of remove strange characters action.
+    Returns (changes_list, total_count)
+    """
+    changes = []
+    total_count = 0
+
+    for col in df.columns:
+        col_str = str(col)
+        if is_email_like_column(col_str) or is_phone_like_column(col_str) or is_url_like_column(col_str):
+            continue
+            
+        for idx, val in df[col].items():
+            if isinstance(val, str):
+                cleaned = _remove_strange_characters(val)
+                if cleaned != val.strip():  # Only consider it changed if the content really changed
+                    total_count += 1
+                    if len(changes) < limit:
+                        changes.append(
+                            CleaningPreviewChange(
+                                row_index=idx,
+                                column=col_str,
+                                original_value=val,
+                                cleaned_value=cleaned,
+                                action_id="remove_strange_characters",
+                                message="Karakter aneh akan dihapus dari teks.",
+                            )
+                        )
 
     return changes, total_count
 
@@ -299,6 +379,10 @@ def generate_cleaning_preview(
             total_all += total
         elif action_id == "standardize_missing_values":
             changes, total = standardize_missing_values_preview(df, limit - len(all_changes))
+            all_changes.extend(changes)
+            total_all += total
+        elif action_id == "remove_strange_characters":
+            changes, total = remove_strange_characters_preview(df, limit - len(all_changes))
             all_changes.extend(changes)
             total_all += total
 
@@ -420,6 +504,29 @@ def apply_standardize_missing_values(df: pd.DataFrame) -> int:
     return cells_modified
 
 
+def apply_remove_strange_characters(df: pd.DataFrame) -> int:
+    """
+    Apply remove_strange_characters to safe text columns.
+    Returns cells_modified count.
+    """
+    cells_modified = 0
+
+    for col in df.columns:
+        col_str = str(col)
+        if is_email_like_column(col_str) or is_phone_like_column(col_str) or is_url_like_column(col_str):
+            continue
+
+        if df[col].dtype == "object" or pd.api.types.is_string_dtype(df[col]):
+            for idx, val in df[col].items():
+                if isinstance(val, str):
+                    cleaned = _remove_strange_characters(val)
+                    if cleaned != val:
+                        df.at[idx, col] = cleaned
+                        cells_modified += 1
+
+    return cells_modified
+
+
 def apply_cleaning_actions(
     df: pd.DataFrame, selected_actions: list[str]
 ) -> tuple[
@@ -441,6 +548,7 @@ def apply_cleaning_actions(
         "normalize_phone",
         "remove_duplicates",
         "standardize_missing_values",
+        "remove_strange_characters",
     }
     invalid = [a for a in selected_actions if a not in supported]
     if invalid:
@@ -467,6 +575,9 @@ def apply_cleaning_actions(
         elif action_id == "standardize_missing_values":
             cells_modified += apply_standardize_missing_values(cleaned_df)
             actions_applied.append(action_id)
+        elif action_id == "remove_strange_characters":
+            cells_modified += apply_remove_strange_characters(cleaned_df)
+            actions_applied.append(action_id)
 
     cleaned_row_count = len(cleaned_df)
 
@@ -480,12 +591,28 @@ def apply_cleaning_actions(
     )
 
 
+def prepare_dataframe_for_csv_export(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Prepare dataframe for safe CSV export.
+    Prefixes phone-like columns with a tab character to prevent Excel scientific notation.
+    """
+    export_df = df.copy()
+    for col in export_df.columns:
+        if is_phone_like_column(str(col)):
+            export_df[col] = export_df[col].apply(
+                lambda x: f"\t{x}" if isinstance(x, str) and x.strip() else x
+            )
+    return export_df
+
+
 def dataframe_to_csv_bytes(df: pd.DataFrame) -> bytes:
     """
     Convert dataframe to UTF-8 CSV bytes.
     Ensures empty strings for missing values in CSV output.
     """
-    csv_df = df.copy()
+    # Protect phone fields from Excel scientific notation
+    csv_df = prepare_dataframe_for_csv_export(df)
+    
     # Replace NaN/NaT with empty string
     for col in csv_df.columns:
         csv_df[col] = csv_df[col].where(~pd.isna(csv_df[col]), "")

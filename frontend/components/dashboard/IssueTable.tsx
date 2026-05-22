@@ -7,38 +7,6 @@ import { Filter, ArrowUpDown } from "lucide-react";
 interface IssueTableProps {
   issues: DataQualityIssue[];
 }
-
-const severityOptions: (IssueSeverity | "all")[] = ["all", "critical", "warning", "info"];
-const typeOptions: (IssueType | "all")[] = [
-  "all",
-  "duplicate",
-  "missing_value",
-  "whitespace",
-  "strange_character",
-  "invalid_email",
-  "invalid_phone",
-];
-
-const severityLabel = (severity: IssueSeverity | "all") => {
-  if (severity === "all") return "Semua";
-  if (severity === "critical") return "Kritikal";
-  if (severity === "warning") return "Peringatan";
-  return "Info";
-};
-
-const typeLabel = (type: IssueType | "all") => {
-  if (type === "all") return "Semua";
-  const map: Record<IssueType, string> = {
-    duplicate: "Duplikat",
-    missing_value: "Nilai kosong",
-    whitespace: "Whitespace",
-    strange_character: "Karakter aneh",
-    invalid_email: "Email tidak valid",
-    invalid_phone: "Telepon tidak valid",
-  };
-  return map[type];
-};
-
 const severityBadge = (severity: IssueSeverity) => {
   if (severity === "critical") return "bg-rose-100 text-rose-700";
   if (severity === "warning") return "bg-amber-100 text-amber-700";
@@ -53,6 +21,7 @@ const typeBadge = (type: IssueType) => {
     strange_character: "bg-fuchsia-100 text-fuchsia-700",
     invalid_email: "bg-cyan-100 text-cyan-700",
     invalid_phone: "bg-emerald-100 text-emerald-700",
+    suspicious_negative_number: "bg-rose-100 text-rose-700",
   };
   return map[type];
 };

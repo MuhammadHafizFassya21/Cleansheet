@@ -12,6 +12,7 @@ const typeLabelMap: Record<string, string> = {
   strange_character_count: "Karakter aneh",
   invalid_email_count: "Email tidak valid",
   invalid_phone_count: "Telepon tidak valid",
+  suspicious_negative_number_count: "Nilai negatif mencurigakan",
 };
 
 export default function ReportIssueSummary({ summary }: Props) {

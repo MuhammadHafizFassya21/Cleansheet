@@ -28,7 +28,8 @@ export type IssueType =
   | "whitespace"
   | "strange_character"
   | "invalid_email"
-  | "invalid_phone";
+  | "invalid_phone"
+  | "suspicious_negative_number";
 
 export type DataQualityIssue = {
   id: string;
@@ -48,6 +49,7 @@ export type IssueSummary = {
   strange_character_count: number;
   invalid_email_count: number;
   invalid_phone_count: number;
+  suspicious_negative_number_count: number;
   total_issues: number;
   critical_issues: number;
   warning_issues: number;

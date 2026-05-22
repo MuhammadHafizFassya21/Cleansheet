@@ -10,6 +10,7 @@ IssueType = Literal[
     "strange_character",
     "invalid_email",
     "invalid_phone",
+    "suspicious_negative_number",
 ]
 
 
@@ -31,6 +32,7 @@ class IssueSummary(BaseModel):
     strange_character_count: int
     invalid_email_count: int
     invalid_phone_count: int
+    suspicious_negative_number_count: int
     total_issues: int
     critical_issues: int
     warning_issues: int

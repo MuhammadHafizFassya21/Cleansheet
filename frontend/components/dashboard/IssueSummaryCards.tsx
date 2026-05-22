@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Bell, AlertTriangle, Copy, FileText, Mail, Phone, Layers, Info } from "lucide-react";
+import { Bell, AlertTriangle, Copy, FileText, Mail, Phone, Layers, Info, AlertCircle } from "lucide-react";
 import { IssueSummary } from "@/lib/types";
 
 interface IssueSummaryCardsProps {
@@ -64,6 +64,13 @@ const summaryItems = (summary: IssueSummary) => [
     description: "Phone numbers that do not match expected format.",
     icon: Phone,
     color: "bg-emerald-50 text-emerald-700",
+  },
+  {
+    title: "Negative Values",
+    value: summary.suspicious_negative_number_count,
+    description: "Suspicious negative numeric values.",
+    icon: AlertCircle,
+    color: "bg-rose-50 text-rose-700",
   },
 ];
 

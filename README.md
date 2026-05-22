@@ -36,7 +36,7 @@ CleanSheet AI menggabungkan rule-based data validation dan Gemini-powered insigh
 
 - Upload CSV dan dataset preview
 - Data Quality Score 0-100
-- Deteksi duplikat, missing value, whitespace, karakter aneh, email tidak valid, dan telepon Indonesia tidak valid
+- Deteksi duplikat, missing value, whitespace, karakter aneh, email tidak valid, telepon Indonesia tidak valid, dan nilai negatif mencurigakan
 - Dashboard isu dan filter
 - Rekomendasi pembersihan
 - Before-after preview
@@ -151,11 +151,12 @@ Privacy-aware AI: dataset penuh tidak dikirim ke Gemini, hanya ringkasan statist
 
 Impact: membantu student, UMKM, dan ops teams memastikan data siap pakai.
 
-## Privacy-Aware AI Design
+## Privacy-Aware AI & Safety Design
 
 - Tidak mengirim full dataset ke Gemini
 - Mengirim summary seperti `quality_score`, `issue_summary`, `top_problem_columns`, dan `recommended_actions`
 - Fallback otomatis jika `GEMINI_API_KEY` tidak diset
+- **Safety First**: Sistem hanya memperbaiki format data yang aman (seperti trim whitespace, format no hp, hapus karakter aneh). Kesalahan logis seperti email salah format atau harga negatif hanya diberi peringatan untuk ditinjau manual. Export CSV ke Excel aman dari scientific notation karena diberi prefix tab.
 
 ## Deployment Preparation
 

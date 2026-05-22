@@ -21,6 +21,7 @@
 - [ ] `POST /api/clean/apply` works
 - [ ] `GET /api/clean/download/{download_id}` works
 - [ ] `POST /api/ai/insight` works (Gemini key optional)
+- [ ] Backend protects CSV output from Excel scientific notation (tab prefix)
 
 ## Demo Flow Checks
 - [ ] Upload sample dirty CSV
@@ -29,7 +30,11 @@
 - [ ] Preview selected fixes
 - [ ] Apply selected fixes
 - [ ] Download cleaned CSV
+- [ ] Verify cleaned CSV does not convert phone numbers to scientific notation in Excel
+- [ ] Verify strange characters (e.g. `@@`) are removed using `remove_strange_characters` action
 - [ ] Generate report summary on Report page
+- [ ] Verify suspicious negative numbers are detected and scored correctly
+- [ ] Verify unresolved issues notice appears after cleaning is applied
 
 ## Known Limitations (expected)
 - [ ] MVP supports CSV only

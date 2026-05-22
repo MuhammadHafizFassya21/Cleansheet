@@ -8,6 +8,17 @@ interface CleaningSummaryCardProps {
   summary: CleaningApplyResponse;
 }
 
+const actionLabel = (actionId: string) => {
+  const map: Record<string, string> = {
+    trim_whitespace: "Trim whitespace",
+    normalize_phone: "Normalisasi telepon",
+    remove_duplicates: "Hapus duplikat",
+    standardize_missing_values: "Standarkan missing value",
+    remove_strange_characters: "Hapus karakter aneh",
+  };
+  return map[actionId] || actionId;
+};
+
 export default function CleaningSummaryCard({ summary }: CleaningSummaryCardProps) {
   return (
     <div className="rounded-3xl border border-slate-200/80 bg-white/90 dark:border-slate-800 dark:bg-slate-950/80 p-5 shadow-sm">
@@ -73,13 +84,19 @@ export default function CleaningSummaryCard({ summary }: CleaningSummaryCardProp
               key={actionId}
               className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700"
             >
-              {actionId}
+              {actionLabel(actionId)}
             </span>
           ))}
           {summary.actions_applied.length === 0 && (
             <span className="text-xs text-slate-500">-</span>
           )}
         </div>
+      </div>
+
+      <div className="mt-4 rounded-xl bg-amber-50 p-4 border border-amber-200/60 dark:bg-amber-950/20 dark:border-amber-900/40">
+        <p className="text-sm text-amber-800 dark:text-amber-200">
+          Beberapa isu mungkin masih memerlukan peninjauan manual, seperti email tidak valid, nomor telepon tidak valid, atau nilai negatif yang mencurigakan. Lakukan analisis ulang setelah pembersihan untuk memastikan kesiapan dataset.
+        </p>
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">

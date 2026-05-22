@@ -1,0 +1,4 @@
+id,name,phone,email,city,transaction_date,total_spent,status
+1,Budi Santoso@@,08xx-123,budi@@gmail.com,Jakarta,,-50000,
+2,Ani,,ani@test.com,Bandung,2023-01-01,15000,Active
+3,Siti!#,0811222333,siti@test.com,Surabaya,,-10000,

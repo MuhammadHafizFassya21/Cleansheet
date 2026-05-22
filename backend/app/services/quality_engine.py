@@ -22,6 +22,14 @@ PHONE_COLUMN_KEYWORDS = (
     "whatsapp",
     "wa",
 )
+NEGATIVE_NUM_COLUMN_KEYWORDS = (
+    "amount", "total", "price", "spent", "revenue", 
+    "sales", "payment", "cost", "quantity", "qty", 
+    "stock", "balance"
+)
+NEGATIVE_NUM_CRITICAL_KEYWORDS = (
+    "total", "payment", "revenue", "price"
+)
 MISSING_VALUES = {"", "n/a", "null", "-", "unknown", "none"}
 
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -71,6 +79,11 @@ def _is_phone_column(column: str) -> bool:
     return any(keyword in column_name for keyword in PHONE_COLUMN_KEYWORDS)
 
 
+def _is_suspicious_negative_column(column: str) -> bool:
+    column_name = column.lower()
+    return any(keyword in column_name for keyword in NEGATIVE_NUM_COLUMN_KEYWORDS)
+
+
 def _is_missing_value(value: Any) -> bool:
     if pd.isna(value):
         return True
@@ -91,7 +104,7 @@ def _has_whitespace_issue(value: str) -> bool:
 
 
 def _has_strange_characters(value: str) -> bool:
-    if "�" in value:
+    if "" in value:
         return True
     if EMOJI_REGEX.search(value):
         return True
@@ -260,6 +273,38 @@ def detect_invalid_phones(df: pd.DataFrame) -> list[DataQualityIssue]:
     return issues
 
 
+def detect_suspicious_negative_numbers(df: pd.DataFrame) -> list[DataQualityIssue]:
+    issues: list[DataQualityIssue] = []
+    for col in df.columns:
+        if not _is_suspicious_negative_column(str(col)):
+            continue
+            
+        col_lower = str(col).lower()
+        is_critical = any(kw in col_lower for kw in NEGATIVE_NUM_CRITICAL_KEYWORDS)
+        severity = "critical" if is_critical else "warning"
+        
+        for idx, row in df.iterrows():
+            value = row[col]
+            if _is_missing_value(value):
+                continue
+            try:
+                if float(value) < 0:
+                    issues.append(
+                        _make_issue(
+                            issue_type="suspicious_negative_number",
+                            severity=severity,
+                            column=str(col),
+                            row_index=idx + 1,
+                            value=value,
+                            message="Suspicious negative numeric value detected.",
+                            recommendation="Review whether this value should be negative. Do not automatically change it unless confirmed."
+                        )
+                    )
+            except (ValueError, TypeError):
+                pass
+    return issues
+
+
 def summarize_issues(issues: list[DataQualityIssue]) -> IssueSummary:
     type_counts = Counter(issue.type for issue in issues)
     severity_counts = Counter(issue.severity for issue in issues)
@@ -270,6 +315,7 @@ def summarize_issues(issues: list[DataQualityIssue]) -> IssueSummary:
         strange_character_count=type_counts.get("strange_character", 0),
         invalid_email_count=type_counts.get("invalid_email", 0),
         invalid_phone_count=type_counts.get("invalid_phone", 0),
+        suspicious_negative_number_count=type_counts.get("suspicious_negative_number", 0),
         total_issues=len(issues),
         critical_issues=severity_counts.get("critical", 0),
         warning_issues=severity_counts.get("warning", 0),
@@ -309,6 +355,7 @@ def analyze_dataframe(df: pd.DataFrame, dataset_id: str) -> DataQualityAnalysisR
     issues.extend(detect_strange_characters(df))
     issues.extend(detect_invalid_emails(df))
     issues.extend(detect_invalid_phones(df))
+    issues.extend(detect_suspicious_negative_numbers(df))
 
     issue_summary = summarize_issues(issues)
     quality_score = calculate_quality_score(issues)

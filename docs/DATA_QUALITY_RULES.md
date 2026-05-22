@@ -65,3 +65,10 @@ Normalized format:
 
 Severity:
 - Critical
+
+### 7. Suspicious Negative Number
+Detect:
+- Negative numbers in columns that typically do not allow negative values (e.g. qty, price, stock, amount, umur, usia).
+
+Severity:
+- Critical

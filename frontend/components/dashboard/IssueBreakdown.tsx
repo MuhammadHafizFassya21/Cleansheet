@@ -21,6 +21,7 @@ export default function IssueBreakdown({ summary }: IssueBreakdownProps) {
     { label: "Karakter aneh", value: summary.strange_character_count, color: "bg-violet-500" },
     { label: "Email tidak valid", value: summary.invalid_email_count, color: "bg-sky-500" },
     { label: "Telepon tidak valid", value: summary.invalid_phone_count, color: "bg-cyan-500" },
+    { label: "Nilai negatif mencurigakan", value: summary.suspicious_negative_number_count, color: "bg-rose-500" },
   ];
 
   const maxValue = Math.max(...items.map((item) => item.value), 1);

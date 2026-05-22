@@ -14,6 +14,7 @@ const actionLabel = (actionId: string) => {
     normalize_phone: "Normalisasi telepon",
     remove_duplicates: "Hapus duplikat",
     standardize_missing_values: "Standarkan missing value",
+    remove_strange_characters: "Hapus karakter aneh",
   };
   return map[actionId] || actionId;
 };

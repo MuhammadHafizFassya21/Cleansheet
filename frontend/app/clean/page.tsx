@@ -192,9 +192,8 @@ export default function CleanPage() {
                 <a
                   href={downloadUrl ?? undefined}
                   download={applyResult.cleaned_file_name}
-                  className={`inline-flex items-center justify-center rounded-3xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 ${
-                    !downloadUrl ? "opacity-50 pointer-events-none" : ""
-                  }`}
+                  className={`inline-flex items-center justify-center rounded-3xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 ${!downloadUrl ? "opacity-50 pointer-events-none" : ""
+                    }`}
                 >
                   Unduh CSV Bersih
                 </a>
