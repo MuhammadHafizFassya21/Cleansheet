@@ -11,8 +11,12 @@ class CleaningAction(BaseModel):
     safe_to_apply: bool
 
 
+# PERUBAHAN untuk backend/app/models/cleaning.py
+# GANTI class CleaningApplyResponse dengan:
+
 class CleaningApplyResponse(BaseModel):
     dataset_id: str
+    cleaned_dataset_id: str  # NEW - dataset ID untuk manual review
     selected_actions: list[str]
     cleaned_file_name: str
     original_row_count: int
@@ -22,6 +26,9 @@ class CleaningApplyResponse(BaseModel):
     actions_applied: list[str]
     download_ready: bool
     download_id: str
+    has_manual_review_issues: bool  # NEW - ada issue untuk manual review?
+    remaining_manual_review_count: int  # NEW - berapa banyak?
+    remaining_manual_review_issue_types: list[str]  # NEW - tipe issue apa saja?
 
 
 class CleaningSummary(BaseModel):

@@ -29,8 +29,12 @@ class ManualValidationResult(BaseModel):
     message: str
 
 
+# PERUBAHAN untuk backend/app/models/manual_review.py
+# GANTI class ManualReviewApplyResponse dengan:
+
 class ManualReviewApplyResponse(BaseModel):
     dataset_id: str
+    final_dataset_id: str  # NEW - dataset final setelah manual review
     total_review_issues: int
     fixed_count: int
     marked_valid_count: int

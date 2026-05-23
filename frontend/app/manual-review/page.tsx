@@ -2,7 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 
+import { useSearchParams } from "next/navigation";
+
 import { Loader2 } from "lucide-react";
+
 
 import {
   applyManualReviewFixes,
@@ -27,10 +30,20 @@ import ManualReviewEmptyState from "@/components/manual-review/ManualReviewEmpty
 import ManualReviewSummary from "@/components/manual-review/ManualReviewSummary";
 
 export default function ManualReviewPage() {
+  return <ManualReviewInner />;
+}
+
+function ManualReviewInner() {
+
   // Accept clean output context: /manual-review?clean_download_id=clean_xxx
+  const searchParams = useSearchParams();
+
+
+
   const [cleanDownloadId, setCleanDownloadId] = useState<string | null>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
 
   const [issues, setIssues] = useState<ManualReviewIssue[]>([]);
 
@@ -51,8 +64,56 @@ export default function ManualReviewPage() {
     return `${getManualReviewDownloadUrl(applyResult.download_id)}?ts=${Date.now()}`;
   }, [applyResult]);
 
+  useEffect(() => {
+    const cleanDownloadIdFromQuery = searchParams.get("clean_download_id");
+    if (!cleanDownloadIdFromQuery) return;
+
+    // Avoid refetch loop
+    setCleanDownloadId((prev) => (prev === cleanDownloadIdFromQuery ? prev : cleanDownloadIdFromQuery));
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!cleanDownloadId) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const file = await getCsvFileFromCleanDownloadId(cleanDownloadId);
+        if (cancelled) return;
+
+        setSelectedFile(file);
+        setIssues([]);
+        setApplyResult(null);
+        setApplyError(null);
+        setDraftEdits({});
+        setValidated({});
+        setMarkedValidIssues({});
+
+        const result = await getManualReviewIssues(file);
+        if (cancelled) return;
+        setIssues(result.manual_review_issues);
+      } catch (err: any) {
+        if (cancelled) return;
+        setError(err?.message || "Unable to load manual review from cleaned CSV.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [cleanDownloadId]);
+
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
+
+
     setIssues([]);
     setError(null);
     setApplyResult(null);

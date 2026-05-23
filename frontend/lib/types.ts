@@ -117,6 +117,7 @@ export type AIInsightResponse = {
 
 export type CleaningApplyResponse = {
   dataset_id: string;
+  cleaned_dataset_id: string;
   selected_actions: string[];
   cleaned_file_name: string;
   original_row_count: number;
@@ -126,6 +127,9 @@ export type CleaningApplyResponse = {
   actions_applied: string[];
   download_ready: boolean;
   download_id: string;
+  has_manual_review_issues: boolean;
+  remaining_manual_review_count: number;
+  remaining_manual_review_issue_types: string[];
 };
 
 // ---------- Manual Review (Phase 11.6) ----------
@@ -159,6 +163,7 @@ export type ManualValidationResult = {
 
 export type ManualReviewApplyResponse = {
   dataset_id: string;
+  final_dataset_id: string;
   total_review_issues: number;
   fixed_count: number;
   marked_valid_count: number;

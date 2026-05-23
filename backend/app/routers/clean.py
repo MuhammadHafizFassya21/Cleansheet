@@ -6,7 +6,7 @@ from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from fastapi.responses import StreamingResponse
 
 from ..models.cleaning import CleaningPreviewResponse, CleaningApplyResponse
-from ..services import parser_service, quality_engine, cleaning_engine
+from ..services import parser_service, quality_engine, cleaning_engine, dataset_store
 from ..services.file_store import save_cleaned_csv, get_cleaned_csv
 
 router = APIRouter()
@@ -138,8 +138,39 @@ async def cleaning_apply(
 
     download_id = save_cleaned_csv(csv_bytes, cleaned_file_name)
 
+        # NEW: Save cleaned dataframe to dataset store for manual review
+    cleaned_dataset_id = dataset_store.save_dataset(
+        cleaned_df,
+        file.filename or "dataset.csv",
+        stage="auto_cleaned"
+    )
+    
+    # NEW: Re-run analysis on cleaned dataframe to detect remaining issues
+    cleaned_analysis = quality_engine.analyze_dataframe(
+        cleaned_df,
+        cleaned_dataset_id
+    )
+    
+    # NEW: Filter manual review issues only
+    manual_review_issue_types = {
+        "invalid_email",
+        "invalid_phone",
+        "suspicious_negative_number",
+        "strange_character"
+    }
+    remaining_manual_review_issues = [
+        issue for issue in cleaned_analysis.issues
+        if issue.type in manual_review_issue_types
+    ]
+    
+    # NEW: Count and collect issue types
+    remaining_issue_types = list(set(
+        issue.type for issue in remaining_manual_review_issues
+    ))
+    
     return CleaningApplyResponse(
         dataset_id=f"ds_{uuid.uuid4().hex[:8]}",
+        cleaned_dataset_id=cleaned_dataset_id,  # NEW
         selected_actions=actions_applied,
         cleaned_file_name=cleaned_file_name,
         original_row_count=original_row_count,
@@ -149,6 +180,9 @@ async def cleaning_apply(
         actions_applied=actions_applied,
         download_ready=True,
         download_id=download_id,
+        has_manual_review_issues=len(remaining_manual_review_issues) > 0,  # NEW
+        remaining_manual_review_count=len(remaining_manual_review_issues),  # NEW
+        remaining_manual_review_issue_types=remaining_issue_types,  # NEW
     )
 
 
