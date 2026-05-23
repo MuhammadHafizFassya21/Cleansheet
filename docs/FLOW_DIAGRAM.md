@@ -20,9 +20,19 @@ User selects suggested fixes
   ↓
 System shows before-after preview
   ↓
-User applies fixes
+User applies fixes (Auto Clean)
   ↓
-User downloads cleaned CSV
+System saves cleaned dataset in memory (`dataset_store`)
+  ↓
+System detects remaining Manual Review issues
+  ↓
+User continues to Manual Review (using `cleaned_dataset_id`)
+  ↓
+User edits remaining issues manually
+  ↓
+System saves final dataset
+  ↓
+User downloads final CSV
 
 System Flow
 

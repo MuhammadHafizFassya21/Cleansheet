@@ -54,6 +54,8 @@ local-part@domain.extension
 Severity:
 - Critical
 
+*Manual Review Policy:* Invalid emails (e.g., `budi@@gmail`) are NOT guessed or auto-fixed. They are sent to the Manual Review queue for user correction.
+
 ### 6. Indonesian Phone Validation
 Valid examples:
 - 08123456789
@@ -66,9 +68,13 @@ Normalized format:
 Severity:
 - Critical
 
+*Manual Review Policy:* Invalid or unclear phone numbers are NOT guessed. They are sent to the Manual Review queue for user correction.
+
 ### 7. Suspicious Negative Number
 Detect:
 - Negative numbers in columns that typically do not allow negative values (e.g. qty, price, stock, amount, umur, usia).
 
 Severity:
 - Critical
+
+*Manual Review Policy:* Suspicious negative numbers are NOT auto-fixed. They are sent to the Manual Review queue, where the user can choose to edit them or mark them as valid (e.g., refund/return).

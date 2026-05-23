@@ -9,9 +9,9 @@ import { Loader2 } from "lucide-react";
 
 import {
   applyManualReviewFixes,
-  getCsvFileFromCleanDownloadId,
   getManualReviewDownloadUrl,
   getManualReviewIssues,
+  getManualReviewIssuesByDatasetId,
   validateManualValue,
 } from "@/lib/api";
 
@@ -35,12 +35,10 @@ export default function ManualReviewPage() {
 
 function ManualReviewInner() {
 
-  // Accept clean output context: /manual-review?clean_download_id=clean_xxx
+  // Accept datasetId context: /manual-review?datasetId=ds_xxx
   const searchParams = useSearchParams();
 
-
-
-  const [cleanDownloadId, setCleanDownloadId] = useState<string | null>(null);
+  const [datasetId, setDatasetId] = useState<string | null>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -65,15 +63,15 @@ function ManualReviewInner() {
   }, [applyResult]);
 
   useEffect(() => {
-    const cleanDownloadIdFromQuery = searchParams.get("clean_download_id");
-    if (!cleanDownloadIdFromQuery) return;
+    const datasetIdFromQuery = searchParams.get("datasetId");
+    if (!datasetIdFromQuery) return;
 
     // Avoid refetch loop
-    setCleanDownloadId((prev) => (prev === cleanDownloadIdFromQuery ? prev : cleanDownloadIdFromQuery));
+    setDatasetId((prev) => (prev === datasetIdFromQuery ? prev : datasetIdFromQuery));
   }, [searchParams]);
 
   useEffect(() => {
-    if (!cleanDownloadId) return;
+    if (!datasetId) return;
 
     let cancelled = false;
 
@@ -82,10 +80,8 @@ function ManualReviewInner() {
         setLoading(true);
         setError(null);
 
-        const file = await getCsvFileFromCleanDownloadId(cleanDownloadId);
         if (cancelled) return;
 
-        setSelectedFile(file);
         setIssues([]);
         setApplyResult(null);
         setApplyError(null);
@@ -93,12 +89,12 @@ function ManualReviewInner() {
         setValidated({});
         setMarkedValidIssues({});
 
-        const result = await getManualReviewIssues(file);
+        const result = await getManualReviewIssuesByDatasetId(datasetId);
         if (cancelled) return;
         setIssues(result.manual_review_issues);
       } catch (err: any) {
         if (cancelled) return;
-        setError(err?.message || "Unable to load manual review from cleaned CSV.");
+        setError(err?.message || "Unable to load manual review from cleaned dataset.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -108,7 +104,7 @@ function ManualReviewInner() {
     return () => {
       cancelled = true;
     };
-  }, [cleanDownloadId]);
+  }, [datasetId]);
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
@@ -179,7 +175,7 @@ function ManualReviewInner() {
   };
 
   const handleApply = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile && !datasetId) return;
 
     const edits: ManualEditRequest[] = [];
     const markedIds: string[] = [];
@@ -193,11 +189,18 @@ function ManualReviewInner() {
       const newVal = draftEdits[issue.id];
       const valRes = validated[issue.id];
 
-      // Only include in edits if user validated true or if issue is type suspicious_negative_number and they edited it
+      // Include edit if:
+      // - User typed a non-empty value AND explicitly validated it as valid, OR
+      // - User typed a non-empty value but skipped validation (we still send it; backend applies the change)
       if (typeof newVal === "string" && newVal.trim() !== "") {
-        if (valRes?.is_valid) {
-          edits.push({ row_index: issue.row_index, column: issue.column, new_value: newVal });
+        // If they validated and it passed, include it
+        if (valRes?.is_valid === true) {
+          edits.push({ row_index: issue.row_index, column: issue.column, new_value: newVal.trim() });
+        } else if (!valRes) {
+          // Not yet validated — include anyway so user doesn't lose their work
+          edits.push({ row_index: issue.row_index, column: issue.column, new_value: newVal.trim() });
         }
+        // If explicitly validated as invalid (valRes.is_valid === false), skip it
       }
     }
 
@@ -206,11 +209,12 @@ function ManualReviewInner() {
     setApplyResult(null);
 
     try {
-      const res = await applyManualReviewFixes(selectedFile, edits, markedIds);
+      const res = await applyManualReviewFixes(selectedFile, datasetId, edits, markedIds);
       setApplyResult(res);
       setIssues([]);
     } catch (err: any) {
-      setApplyError(err?.message || "Unable to apply manual fixes.");
+      console.error("applyManualReviewFixes error:", err);
+      setApplyError(err?.message || "Gagal menerapkan perbaikan manual. Coba lagi.");
     } finally {
       setApplyLoading(false);
     }
@@ -225,13 +229,24 @@ function ManualReviewInner() {
       </div>
 
       <div className="mt-10 mb-6">
-        <ManualReviewUploadCard
-          selectedFile={selectedFile}
-          onFileSelect={handleFileSelect}
-          onGetRecommendations={handleFindIssues}
-          loading={loading}
-          error={error}
-        />
+        {datasetId ? (
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-6 text-center dark:border-indigo-900/50 dark:bg-indigo-950/20">
+            <h3 className="text-lg font-semibold text-indigo-900 dark:text-indigo-100 mb-2">
+              Meninjau Dataset yang Telah Dicuci Otomatis
+            </h3>
+            <p className="text-sm text-indigo-900/80 dark:text-indigo-100/80">
+              Anda sedang melihat isu-isu yang tersisa dari proses pencucian otomatis. Selesaikan tinjauan di bawah dan simpan hasilnya.
+            </p>
+          </div>
+        ) : (
+          <ManualReviewUploadCard
+            selectedFile={selectedFile}
+            onFileSelect={handleFileSelect}
+            onGetRecommendations={handleFindIssues}
+            loading={loading}
+            error={error}
+          />
+        )}
       </div>
 
       {issues.length === 0 && loading && (
@@ -261,7 +276,7 @@ function ManualReviewInner() {
             <button
               type="button"
               onClick={handleApply}
-              disabled={applyLoading || !selectedFile}
+              disabled={applyLoading || (!selectedFile && !datasetId)}
               className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             >
               {applyLoading ? (

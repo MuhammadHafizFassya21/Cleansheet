@@ -29,8 +29,17 @@ class ManualValidationResult(BaseModel):
     message: str
 
 
-# PERUBAHAN untuk backend/app/models/manual_review.py
-# GANTI class ManualReviewApplyResponse dengan:
+class ManualValidateRequest(BaseModel):
+    column: str
+    value: str
+    issue_type: str
+
+
+class ManualReviewIssuesResponse(BaseModel):
+    dataset_id: str
+    manual_review_issues: list[ManualReviewIssue]
+    total: int
+
 
 class ManualReviewApplyResponse(BaseModel):
     dataset_id: str

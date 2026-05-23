@@ -35,6 +35,9 @@
 - [ ] Generate report summary on Report page
 - [ ] Verify suspicious negative numbers are detected and scored correctly
 - [ ] Verify unresolved issues notice appears after cleaning is applied
+- [ ] Verify Manual Review from Clean page uses cleaned dataset
+- [ ] Verify already fixed issues do not reappear in Manual Review
+- [ ] Verify manual edits apply to cleaned dataset and generate final CSV
 
 ## Known Limitations (expected)
 - [ ] MVP supports CSV only

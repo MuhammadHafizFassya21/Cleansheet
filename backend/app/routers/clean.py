@@ -88,6 +88,7 @@ async def cleaning_apply(
 ):
     """
     Apply selected cleaning actions to uploaded CSV and prepare cleaned CSV for download.
+    Also stores the cleaned dataset and returns manual review metadata.
     """
     try:
         contents = await file.read()
@@ -138,19 +139,19 @@ async def cleaning_apply(
 
     download_id = save_cleaned_csv(csv_bytes, cleaned_file_name)
 
-        # NEW: Save cleaned dataframe to dataset store for manual review
+    # NEW: Save cleaned dataframe to dataset store for manual review
     cleaned_dataset_id = dataset_store.save_dataset(
         cleaned_df,
         file.filename or "dataset.csv",
         stage="auto_cleaned"
     )
-    
+
     # NEW: Re-run analysis on cleaned dataframe to detect remaining issues
     cleaned_analysis = quality_engine.analyze_dataframe(
         cleaned_df,
         cleaned_dataset_id
     )
-    
+
     # NEW: Filter manual review issues only
     manual_review_issue_types = {
         "invalid_email",

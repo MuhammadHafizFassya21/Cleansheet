@@ -38,8 +38,13 @@ CleanSheet AI menggabungkan rule-based data validation dan Gemini-powered insigh
 - Data Quality Score 0-100
 - Deteksi duplikat, missing value, whitespace, karakter aneh, email tidak valid, telepon Indonesia tidak valid, dan nilai negatif mencurigakan
 - Dashboard isu dan filter
-- Rekomendasi pembersihan
+- Rekomendasi pembersihan otomatis
 - Before-after preview
+- **Unified Cleaning dan Manual Review Workflow**:
+  - Halaman Clean memperbaiki isu yang aman secara otomatis.
+  - Isu ambigu (seperti email/telepon tidak valid) yang tersisa akan diteruskan ke Manual Review melalui `cleaned_dataset_id`.
+  - Manual Review bekerja langsung pada dataset yang sudah dicuci otomatis, bukan file asli.
+  - Opsi upload langsung ke Manual Review tetap didukung.
 - Apply cleaning dan download cleaned CSV
 - Report page untuk ringkasan final
 - AI insight dengan desain privacy-aware

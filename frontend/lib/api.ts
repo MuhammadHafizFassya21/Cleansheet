@@ -167,6 +167,18 @@ export async function getManualReviewIssues(file: File) {
   return response.json();
 }
 
+export async function getManualReviewIssuesByDatasetId(datasetId: string) {
+  const response = await fetch(`${API_BASE_URL}/api/manual-review/issues/${datasetId}`, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to find manual review issues for the dataset."));
+  }
+
+  return response.json();
+}
+
 export async function getCsvFileFromCleanDownloadId(cleanDownloadId: string): Promise<File> {
   const res = await fetch(getCleanedCsvDownloadUrl(cleanDownloadId));
   if (!res.ok) {
@@ -177,7 +189,6 @@ export async function getCsvFileFromCleanDownloadId(cleanDownloadId: string): Pr
   const fileName = `cleaned_${cleanDownloadId}.csv`;
   return new File([blob], fileName, { type: "text/csv" });
 }
-
 
 export async function validateManualValue(payload: {
   row_index: number;
@@ -199,12 +210,18 @@ export async function validateManualValue(payload: {
 }
 
 export async function applyManualReviewFixes(
-  file: File,
+  file: File | null,
+  datasetId: string | null,
   edits: { row_index: number; column: string; new_value: string }[],
   markedValidIssues: string[]
 ) {
   const formData = new FormData();
-  formData.append("file", file);
+  if (file) {
+    formData.append("file", file);
+  }
+  if (datasetId) {
+    formData.append("dataset_id", datasetId);
+  }
   formData.append("edits", JSON.stringify(edits));
   formData.append("marked_valid_issues", JSON.stringify(markedValidIssues));
 
@@ -224,4 +241,3 @@ export async function applyManualReviewFixes(
 export function getManualReviewDownloadUrl(downloadId: string) {
   return getCleanedCsvDownloadUrl(downloadId);
 }
-

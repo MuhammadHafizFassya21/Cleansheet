@@ -1,178 +1,179 @@
 import json
 import uuid
+import logging
 from typing import Any
 
-import pandas as pd
-from fastapi import APIRouter, File, UploadFile, Form, HTTPException
+from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Path
+from fastapi.responses import StreamingResponse
 
-from ..models.issue import DataQualityAnalysisResponse
 from ..models.manual_review import (
+    ManualReviewIssuesResponse,
     ManualEditRequest,
-    ManualReviewApplyResponse,
-    ManualReviewIssue,
+    ManualValidateRequest,
     ManualValidationResult,
+    ManualReviewApplyResponse,
 )
-from ..services import file_store, manual_review_service, parser_service, quality_engine, cleaning_engine, dataset_store
+from ..services import parser_service, quality_engine, manual_review_service, dataset_store
+from ..services.file_store import save_cleaned_csv
+
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
-def _parse_json_field(val: str) -> Any:
-    if not val:
-        return None
-    try:
-        return json.loads(val)
-    except Exception:
-        return None
-
-
-@router.post("/issues")
-async def manual_review_issues(file: UploadFile = File(...)):
+@router.post("/issues", response_model=ManualReviewIssuesResponse)
+async def get_issues_from_file(file: UploadFile = File(...)):
+    """Extract manual review issues from a freshly uploaded CSV file."""
     try:
         contents = await file.read()
     except Exception:
-        raise HTTPException(status_code=400, detail="Unable to analyze dataset.")
+        raise HTTPException(status_code=400, detail="Unable to read file.")
 
-    file_size = len(contents)
-    parser_service.validate_csv_file(file, file_size)
+    parser_service.validate_csv_file(file, len(contents))
 
-    df = parser_service.read_csv_file(contents)
+    try:
+        df = parser_service.read_csv_file(contents)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Unable to parse CSV file.")
 
-    analysis = quality_engine.analyze_dataframe(df, f"ds_{uuid.uuid4().hex[:8]}")
-    manual_issues = manual_review_service.get_manual_review_issues(df, analysis.issues)
-
-    return {
-        "dataset_id": analysis.dataset_id,
-        "manual_review_issues": [i.dict() for i in manual_issues],
-        "total": len(manual_issues),
-    }
-
-@router.get("/issues/{dataset_id}")
-async def manual_review_issues_by_dataset_id(dataset_id: str):
-    """
-    Get manual review issues for a dataset from session store.
-    Used when coming from Clean page workflow.
-    """
-    result = dataset_store.get_dataset(dataset_id)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Dataset not found or expired.")
-    
-    df, metadata = result
-    
-    # Re-run analysis on the stored dataframe
+    dataset_id = f"ds_{uuid.uuid4().hex[:8]}"
     analysis = quality_engine.analyze_dataframe(df, dataset_id)
     
-    # Get only manual review issues
     manual_issues = manual_review_service.get_manual_review_issues(df, analysis.issues)
     
-    return {
-        "dataset_id": dataset_id,
-        "stage": metadata.get("stage"),
-        "manual_review_issues": [i.dict() for i in manual_issues],
-        "total": len(manual_issues),
-        "created_at": metadata.get("created_at"),
-    }
+    # Store this dataset so we can apply edits to it
+    dataset_store.save_dataset(df, file.filename or "dataset.csv", stage="uploaded", metadata={"dataset_id": dataset_id})
+
+    return ManualReviewIssuesResponse(
+        dataset_id=dataset_id,
+        manual_review_issues=manual_issues,
+        total=len(manual_issues),
+    )
+
+
+@router.get("/issues/{dataset_id}", response_model=ManualReviewIssuesResponse)
+async def get_issues_from_store(dataset_id: str = Path(...)):
+    """Fetch manual review issues for an already stored dataset (e.g. after auto-cleaning)."""
+    stored = dataset_store.get_dataset(dataset_id)
+    if not stored:
+        raise HTTPException(status_code=404, detail="Dataset not found or expired.")
+        
+    df = stored["df"]
+    analysis = quality_engine.analyze_dataframe(df, dataset_id)
+    manual_issues = manual_review_service.get_manual_review_issues(df, analysis.issues)
+    
+    return ManualReviewIssuesResponse(
+        dataset_id=dataset_id,
+        manual_review_issues=manual_issues,
+        total=len(manual_issues),
+    )
+
 
 @router.post("/validate", response_model=ManualValidationResult)
-async def manual_review_validate(payload: dict):
-    try:
-        row_index = int(payload.get("row_index"))
-        column = str(payload.get("column"))
-        value = payload.get("value")
-        issue_type = str(payload.get("issue_type"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid request payload.")
+async def validate_manual_edit(request: ManualValidateRequest):
+    """Validate a single manual edit value before applying."""
+    return manual_review_service.validate_manual_value(
+        column=request.column,
+        value=request.value,
+        issue_type=request.issue_type,
+    )
 
-    res = manual_review_service.validate_manual_value(column=column, value=value, issue_type=issue_type)
-    res.row_index = row_index
-    return res
+
+def _parse_json_field(field_str: str) -> Any:
+    if not field_str:
+        return []
+    try:
+        return json.loads(field_str)
+    except Exception:
+        return []
 
 
 @router.post("/apply", response_model=ManualReviewApplyResponse)
-async def manual_review_apply(
-    file: UploadFile = File(None),  # Changed to optional
+async def apply_manual_review(
+    dataset_id: str = Form(None),
+    file: UploadFile = File(None),
     edits: str = Form(default="[]"),
     marked_valid_issues: str = Form(default="[]"),
-    dataset_id: str = Form(default=""),  # NEW
 ):
-        # MODE A: From Clean page with dataset_id
-    if dataset_id:
-        result = dataset_store.get_dataset(dataset_id)
-        if result is None:
-            raise HTTPException(status_code=404, detail="Dataset not found or expired.")
-        df, metadata = result
-        original_file_name = metadata.get("file_name", "dataset.csv")
+    """
+    Apply manual edits to a dataset.
+    Supports two modes: dataset_id (already stored) OR file (newly uploaded).
+    """
+    df = None
+    original_name = "dataset.csv"
     
-    # MODE B: Direct upload with file
+    # Mode A: Stored dataset
+    if dataset_id:
+        stored = dataset_store.get_dataset(dataset_id)
+        if not stored:
+            raise HTTPException(status_code=404, detail="Dataset not found or expired.")
+        df = stored["df"]
+        original_name = stored.get("file_name", "dataset.csv")
+    
+    # Mode B: File upload
     elif file:
         try:
             contents = await file.read()
         except Exception:
-            raise HTTPException(status_code=400, detail="Unable to analyze dataset.")
-
-        file_size = len(contents)
-        parser_service.validate_csv_file(file, file_size)
-        df = parser_service.read_csv_file(contents)
-        original_file_name = file.filename or "dataset.csv"
-    
+            raise HTTPException(status_code=400, detail="Unable to read file.")
+        
+        parser_service.validate_csv_file(file, len(contents))
+        try:
+            df = parser_service.read_csv_file(contents)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Unable to parse CSV file.")
+        
+        original_name = file.filename or "dataset.csv"
+        dataset_id = f"ds_{uuid.uuid4().hex[:8]}"
     else:
         raise HTTPException(status_code=400, detail="Either dataset_id or file must be provided.")
 
-    edits_parsed = _parse_json_field(edits) or []
-    marked_parsed = _parse_json_field(marked_valid_issues) or []
-
-    try:
-        edits_models = [ManualEditRequest(**e) for e in edits_parsed]
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid edits payload.")
-
-    if not isinstance(marked_parsed, list):
-        marked_parsed = []
-
-    # Apply edits first
-    updated_df = manual_review_service.apply_manual_edits(df, edits_models)
-
-    # Re-run analysis on edited df
-    analysis = quality_engine.analyze_dataframe(updated_df, f"ds_{uuid.uuid4().hex[:8]}")
-    filtered_issues = manual_review_service.filter_manual_review_issue_types(analysis.issues)
-
-    # Ignore issues marked valid
-    remaining = [i for i in filtered_issues if i.id not in set(marked_parsed)]
-
-    fixed_count = 0
-    marked_valid_count = 0
-
-    # Determine counts by comparing which issue ids are resolved
-    all_filtered_ids = {i.id for i in filtered_issues}
-    marked_valid_set = set(marked_parsed)
-    marked_valid_count = len(marked_valid_set.intersection(all_filtered_ids))
-
-    remaining_ids = {i.id for i in remaining}
-    fixed_count = len(all_filtered_ids.difference(remaining_ids).difference(marked_valid_set))
-
-    remaining_issues_count = len(remaining)
-
-        # NEW: Save final dataframe to dataset store
-    final_dataset_id = dataset_store.save_dataset(
-        updated_df,
-        f"manual_cleaned_{original_file_name}",
-        stage="manually_reviewed"
-    )
+    # Parse edits and marked_valid
+    edits_list = _parse_json_field(edits)
+    marked_valid_list = _parse_json_field(marked_valid_issues)
     
-    csv_bytes = manual_review_service.generate_manual_review_csv(updated_df)
-    download_id = None
-    download_ready = True
+    edit_requests = []
+    for ed in edits_list:
+        try:
+            edit_requests.append(ManualEditRequest(**ed))
+        except Exception:
+            pass
 
-    # Always generate download for MVP even if issues remain
-    download_id = file_store.save_cleaned_csv(csv_bytes, f"manual_cleaned_{original_file_name}")
+    # Apply edits
+    edited_df = manual_review_service.apply_manual_edits(df, edit_requests)
+    
+    # Re-analyze
+    final_dataset_id = f"ds_final_{uuid.uuid4().hex[:8]}"
+    analysis = quality_engine.analyze_dataframe(edited_df, final_dataset_id)
+    
+    # Check remaining issues
+    all_manual_issues = manual_review_service.get_manual_review_issues(edited_df, analysis.issues)
+    
+    # Filter out issues that were marked valid
+    remaining_issues = [
+        issue for issue in all_manual_issues 
+        if issue.id not in marked_valid_list
+    ]
+
+    # Generate CSV
+    try:
+        csv_bytes = manual_review_service.generate_manual_review_csv(edited_df)
+    except Exception:
+        logger.exception("Failed to generate manual review CSV.")
+        raise HTTPException(status_code=500, detail="Error generating final CSV.")
+        
+    final_file_name = f"manual_clean_{original_name}"
+    download_id = save_cleaned_csv(csv_bytes, final_file_name)
+    
+    # Save the final dataset
+    dataset_store.save_dataset(edited_df, final_file_name, stage="manually_reviewed", metadata={"dataset_id": final_dataset_id})
 
     return ManualReviewApplyResponse(
-        dataset_id=analysis.dataset_id,
+        dataset_id=dataset_id,
         final_dataset_id=final_dataset_id,
-        total_review_issues=len(all_filtered_ids),
-        fixed_count=fixed_count,
-        marked_valid_count=marked_valid_count,
-        remaining_issues_count=remaining_issues_count,
+        total_review_issues=len(edits_list) + len(marked_valid_list) + len(remaining_issues),
+        fixed_count=len(edits_list),
+        marked_valid_count=len(marked_valid_list),
+        remaining_issues_count=len(remaining_issues),
+        download_ready=True,
         download_id=download_id,
-        download_ready=download_ready,
     )
-

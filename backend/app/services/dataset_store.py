@@ -1,52 +1,34 @@
-# backend/app/services/dataset_store.py
-
 import time
 import uuid
 from typing import Any
-from datetime import datetime
+
 import pandas as pd
 
-# Temporary in-memory storage for MVP (session-based)
-# NOTE: This resets on backend restart.
+# Temporary in-memory storage for datasets during the workflow
+# NOTE: This resets on backend restart. Use only for MVP/temporary flow.
+# Structure: { dataset_id: { "df": pd.DataFrame, "file_name": str, "stage": str, "created_at": float, "metadata": dict } }
 DATASETS: dict[str, dict[str, Any]] = {}
-MAX_AGE_SECONDS = 60 * 60  # 1 hour
+MAX_AGE_SECONDS = 30 * 60  # 30 minutes
 
 
 def _cleanup_expired_datasets() -> None:
-    """Remove expired datasets from storage."""
+    """Removes datasets older than MAX_AGE_SECONDS."""
     now = time.time()
     expired_ids = [
-        dataset_id
-        for dataset_id, payload in DATASETS.items()
+        ds_id
+        for ds_id, payload in DATASETS.items()
         if (now - payload.get("created_at", now)) > MAX_AGE_SECONDS
     ]
-    for dataset_id in expired_ids:
-        DATASETS.pop(dataset_id, None)
+    for ds_id in expired_ids:
+        DATASETS.pop(ds_id, None)
 
 
-def save_dataset(
-    df: pd.DataFrame,
-    file_name: str,
-    stage: str = "uploaded",
-    metadata: dict[str, Any] | None = None,
-) -> str:
-    """
-    Save a dataset to temporary storage.
-    
-    Args:
-        df: Pandas DataFrame to store
-        file_name: Original filename
-        stage: Current stage (uploaded, auto_cleaned, manually_reviewed)
-        metadata: Additional metadata to store
-    
-    Returns:
-        dataset_id for later retrieval
-    """
+def save_dataset(df: pd.DataFrame, file_name: str, stage: str, metadata: dict = None) -> str:
+    """Save a dataset and return its unique ID."""
     _cleanup_expired_datasets()
-    dataset_id = f"ds_{uuid.uuid4().hex[:10]}"
-    
+    dataset_id = f"ds_{uuid.uuid4().hex[:12]}"
     DATASETS[dataset_id] = {
-        "dataframe": df.copy(),
+        "df": df.copy(),
         "file_name": file_name,
         "stage": stage,
         "created_at": time.time(),
@@ -55,75 +37,37 @@ def save_dataset(
     return dataset_id
 
 
-def get_dataset(dataset_id: str) -> tuple[pd.DataFrame, dict[str, Any]] | None:
-    """
-    Retrieve a dataset and its metadata.
-    
-    Returns:
-        Tuple of (dataframe, metadata_dict) or None if not found
-    """
+def get_dataset(dataset_id: str) -> dict[str, Any] | None:
+    """Retrieve a dataset payload by ID."""
     _cleanup_expired_datasets()
     payload = DATASETS.get(dataset_id)
-    if payload is None:
-        return None
-    
-    return payload["dataframe"].copy(), {
-        "file_name": payload["file_name"],
-        "stage": payload["stage"],
-        "created_at": payload["created_at"],
-        **payload["metadata"],
-    }
+    if payload:
+        # Update accessed time to extend lifespan? For MVP, just return it.
+        pass
+    return payload
 
 
-def update_dataset(
-    dataset_id: str,
-    df: pd.DataFrame,
-    stage: str | None = None,
-    metadata: dict[str, Any] | None = None,
-) -> bool:
-    """
-    Update an existing dataset.
-    
-    Args:
-        dataset_id: ID of dataset to update
-        df: New dataframe
-        stage: New stage (optional)
-        metadata: Additional metadata to merge (optional)
-    
-    Returns:
-        True if updated, False if dataset not found
-    """
-    if dataset_id not in DATASETS:
-        return False
-    
-    if stage is not None:
-        DATASETS[dataset_id]["stage"] = stage
-    
-    DATASETS[dataset_id]["dataframe"] = df.copy()
-    
-    if metadata is not None:
-        DATASETS[dataset_id]["metadata"].update(metadata)
-    
-    return True
-
-
-def delete_dataset(dataset_id: str) -> bool:
-    """Delete a dataset from storage."""
+def update_dataset(dataset_id: str, df: pd.DataFrame, stage: str = None) -> bool:
+    """Update an existing dataset."""
+    _cleanup_expired_datasets()
     if dataset_id in DATASETS:
-        DATASETS.pop(dataset_id)
+        DATASETS[dataset_id]["df"] = df.copy()
+        if stage:
+            DATASETS[dataset_id]["stage"] = stage
+        DATASETS[dataset_id]["created_at"] = time.time()  # Reset expiry
         return True
     return False
 
 
-def list_datasets() -> list[dict[str, Any]]:
-    """List all datasets in storage (for debugging/cleanup)."""
-    _cleanup_expired_datasets()
-    return [
-        {
-            "dataset_id": dataset_id,
-            "file_name": payload["file_name"],
-            "stage": payload["stage"],
-            "created_at": datetime.fromtimestamp(payload["created_at"]).isoformat(),
-        }
-        for dataset_id, payload in DATASETS.items()
-    ]
+def delete_dataset(dataset_id: str) -> bool:
+    """Explicitly delete a dataset."""
+    if dataset_id in DATASETS:
+        del DATASETS[dataset_id]
+        return True
+    return False
+
+
+def save_cleaned_dataset(df: pd.DataFrame, original_file_name: str) -> str:
+    """Helper for saving a dataset right after auto-cleaning."""
+    cleaned_name = f"cleaned_{original_file_name}"
+    return save_dataset(df, cleaned_name, stage="auto_cleaned")
