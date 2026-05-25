@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -136,14 +136,10 @@ export default function HomePage() {
     };
   }, []);
 
-  const statusText = useMemo(() => {
-    if (loading) return "Memeriksa backend...";
-    if (error) return "Backend tidak tersedia. Periksa konfigurasi API production.";
-    return health?.status === "ok" ? "Backend terhubung" : "Status backend tidak diketahui";
-  }, [error, health, loading]);
-
   return (
     <div className="relative overflow-hidden">
+      <StatusBadge health={health} loading={loading} error={error} apiBaseUrl={getApiBaseUrl()} />
+
       <div className="absolute inset-0 -z-10">
         <div className="absolute -top-40 left-1/2 h-[620px] w-[1100px] -translate-x-1/2 rounded-full bg-gradient-to-r from-emerald-400/30 via-teal-400/20 to-sky-400/20 blur-3xl" />
         <div className="absolute bottom-[-240px] right-[-240px] h-[520px] w-[520px] rounded-full bg-gradient-to-tr from-emerald-500/20 to-slate-500/10 blur-3xl" />
@@ -151,10 +147,6 @@ export default function HomePage() {
 
       <section className="mx-auto max-w-6xl px-4 pt-14 pb-14 sm:pt-16 sm:pb-20">
         <div className="flex flex-col items-center text-center">
-          <div className="mb-5">
-            <StatusBadge health={health} loading={loading} error={error} apiBaseUrl={getApiBaseUrl()} />
-          </div>
-
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white sm:text-5xl md:text-6xl">
             CleanSheet <span className="text-emerald-500">AI</span>
           </h1>
@@ -182,11 +174,6 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="mt-8 text-xs text-slate-500 dark:text-slate-400">
-            <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 dark:border-slate-800 dark:bg-slate-900/60">
-              {statusText}
-            </span>
-          </div>
         </div>
       </section>
 
