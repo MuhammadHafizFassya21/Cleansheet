@@ -19,6 +19,7 @@ export type DatasetPreviewResponse = {
   column_count: number;
   columns: ColumnMetadata[];
   preview: Record<string, string | number | boolean | null>[];
+  preview_issues?: DataQualityIssue[];
 };
 
 export type IssueSeverity = "critical" | "warning" | "info";
@@ -168,7 +169,12 @@ export type ManualValidationResult = {
   column: string;
   value: string | null;
   is_valid: boolean;
-  issue_type: "invalid_email" | "invalid_phone" | "suspicious_negative_number" | null;
+  issue_type:
+    | "invalid_email"
+    | "invalid_phone"
+    | "suspicious_negative_number"
+    | "strange_character"
+    | null;
   message: string;
 };
 
