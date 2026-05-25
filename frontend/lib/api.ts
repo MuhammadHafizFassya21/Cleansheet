@@ -1,10 +1,7 @@
-/** Browser dev: same-origin proxy (/api-backend). Server/direct: localhost:8000 */
-export function getApiBaseUrl(): string {
-  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  if (envUrl) return envUrl.replace(/\/$/, "");
-  if (typeof window !== "undefined") return "/api-backend";
-  return "http://127.0.0.1:8000";
-}
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+
+export const getApiBaseUrl = () => API_BASE_URL.replace(/\/$/, "");
 
 async function fetchWithTimeout(
   url: string,
@@ -18,7 +15,7 @@ async function fetchWithTimeout(
   } catch (err: unknown) {
     if (err instanceof Error && err.name === "AbortError") {
       throw new Error(
-        `Permintaan ke API melebihi batas waktu (${timeoutMs / 1000}s). Pastikan backend berjalan di port 8000.`
+        `Permintaan ke API melebihi batas waktu (${timeoutMs / 1000}s). Backend tidak dapat dijangkau.`
       );
     }
     throw err;
@@ -40,7 +37,7 @@ async function getErrorMessage(response: Response, fallback: string) {
         if (Array.isArray(unresolved) && unresolved.length) {
           parts.push(unresolved.slice(0, 5).join("; "));
         }
-        return parts.join(" — ");
+        return parts.join(" - ");
       }
     }
 

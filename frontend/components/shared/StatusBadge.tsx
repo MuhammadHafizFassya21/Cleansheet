@@ -8,9 +8,10 @@ interface StatusBadgeProps {
   health: BackendHealth | null;
   loading: boolean;
   error: boolean;
+  apiBaseUrl?: string;
 }
 
-export default function StatusBadge({ health, loading, error }: StatusBadgeProps) {
+export default function StatusBadge({ health, loading, error, apiBaseUrl }: StatusBadgeProps) {
   if (loading) {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-medium w-fit">
@@ -22,9 +23,16 @@ export default function StatusBadge({ health, loading, error }: StatusBadgeProps
 
   if (error || !health || health.status !== "ok") {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 text-xs font-medium w-fit">
-        <AlertCircle className="h-3 w-3 text-rose-500 animate-pulse" />
-        <span>API Offline — jalankan backend di port 8000</span>
+      <div className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 text-xs font-medium w-fit">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-3 w-3 text-rose-500 animate-pulse" />
+          <span>API Offline — backend tidak dapat dijangkau</span>
+        </div>
+        {apiBaseUrl ? (
+          <span className="max-w-[280px] truncate text-[11px] font-normal opacity-80">
+            Configured API URL: {apiBaseUrl}
+          </span>
+        ) : null}
       </div>
     );
   }

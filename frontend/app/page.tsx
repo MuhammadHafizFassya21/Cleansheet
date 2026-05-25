@@ -12,7 +12,7 @@ import {
   Sparkles,
   Wand2,
 } from "lucide-react";
-import { getBackendHealth } from "@/lib/api";
+import { getApiBaseUrl, getBackendHealth } from "@/lib/api";
 import { BackendHealth } from "@/lib/types";
 import StatusBadge from "@/components/shared/StatusBadge";
 
@@ -137,8 +137,8 @@ export default function HomePage() {
   }, []);
 
   const statusText = useMemo(() => {
-    if (loading) return "Memeriksa backend…";
-    if (error) return "Backend tidak tersedia";
+    if (loading) return "Memeriksa backend...";
+    if (error) return "Backend tidak tersedia. Periksa konfigurasi API production.";
     return health?.status === "ok" ? "Backend terhubung" : "Status backend tidak diketahui";
   }, [error, health, loading]);
 
@@ -152,7 +152,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-6xl px-4 pt-14 pb-14 sm:pt-16 sm:pb-20">
         <div className="flex flex-col items-center text-center">
           <div className="mb-5">
-            <StatusBadge health={health} loading={loading} error={error} />
+            <StatusBadge health={health} loading={loading} error={error} apiBaseUrl={getApiBaseUrl()} />
           </div>
 
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white sm:text-5xl md:text-6xl">
