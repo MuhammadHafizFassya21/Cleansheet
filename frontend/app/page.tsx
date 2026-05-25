@@ -103,21 +103,37 @@ export default function HomePage() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function checkHealth() {
       try {
         setLoading(true);
-        const data = await getBackendHealth();
-        setHealth(data);
         setError(false);
-      } catch (err) {
-        console.error(err);
+        let lastErr: unknown;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const data = await getBackendHealth();
+            if (cancelled) return;
+            setHealth(data);
+            setError(false);
+            return;
+          } catch (err) {
+            lastErr = err;
+            if (attempt === 0) await new Promise((r) => setTimeout(r, 400));
+          }
+        }
+        if (cancelled) return;
+        console.error(lastErr);
         setError(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     checkHealth();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const statusText = useMemo(() => {

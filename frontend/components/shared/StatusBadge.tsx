@@ -24,7 +24,7 @@ export default function StatusBadge({ health, loading, error }: StatusBadgeProps
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 text-xs font-medium w-fit">
         <AlertCircle className="h-3 w-3 text-rose-500 animate-pulse" />
-        <span>API Offline (Gagal terhubung)</span>
+        <span>API Offline — jalankan backend di port 8000</span>
       </div>
     );
   }

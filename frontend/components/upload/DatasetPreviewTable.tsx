@@ -141,10 +141,10 @@ export default function DatasetPreviewTable({ dataset }: DatasetPreviewTableProp
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-slate-900 dark:text-white">
-            Pratinjau Data (20 Baris Pertama)
+            Data yang Rusak dan Perlu Diperbaiki
           </h2>
           <span className="text-xs text-slate-450 dark:text-slate-400">
-            Menampilkan maks. 20 baris data
+            Menampilkan maks. 20 baris bermasalah
           </span>
         </div>
         <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900/50">
@@ -162,14 +162,37 @@ export default function DatasetPreviewTable({ dataset }: DatasetPreviewTableProp
                 {dataset.preview.map((row, rowIdx) => (
                   <tr key={rowIdx} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/20">
                     <td className="px-4 py-3 text-center border-r border-slate-200 dark:border-slate-800 font-bold text-slate-300 dark:text-slate-600">
-                      {rowIdx + 1}
+                      {row["_original_row_index"] ?? rowIdx + 1}
                     </td>
                     {dataset.columns.map((col, colIdx) => {
                       const cellVal = row[col.name];
+                      const actualRowIndex = rowIdx + 1; // Not accurate if row_index is not sequential, but wait! We need the actual row index from the issue!
+                      
+                      // Find if this specific cell has an issue
+                      // Wait! We don't have the actual row index of the row in the UI easily accessible unless we pass it, but dataset.preview_issues contains the actual row index.
+                      // The row itself might not have an ID.
+                      // Actually we should just check if this cell value and column match any issue in preview_issues for this row...
+                      // Wait, let's just pass a generic check or add row_index to the preview row in backend.
+                      // Since we can't easily correlate, let's just check if ANY issue in preview_issues has column == col.name and the value matches? But value isn't in preview_issues!
+                      // Let's modify the backend to inject _original_row_index into the row.
+                      // For now, let's just check if preview_issues has an issue for this column in this row (assuming rowIdx is just the index in the preview array).
+                      // We need _original_row_index. I will modify the backend to inject it.
+                      const originalRowIndex = row["_original_row_index"];
+                      const cellIssue = dataset.preview_issues?.find(
+                        (i) => i.column === col.name && i.row_index === originalRowIndex
+                      );
+
+                      const isMissing = cellVal === null || cellVal === undefined || cellVal === "";
+                      const hasIssue = !!cellIssue;
+
                       return (
-                        <td key={colIdx} className="px-5 py-3 truncate max-w-[200px]">
-                          {cellVal === null || cellVal === undefined ? (
+                        <td key={colIdx} className={`px-5 py-3 truncate max-w-[200px] ${hasIssue && !isMissing ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}`}>
+                          {isMissing ? (
                             <span className="text-rose-400/70 italic bg-rose-50/20 dark:bg-rose-950/10 px-1.5 py-0.5 rounded">NULL</span>
+                          ) : hasIssue ? (
+                            <span className="text-amber-600 dark:text-amber-400 font-semibold" title={cellIssue.type}>
+                              {String(cellVal)}
+                            </span>
                           ) : typeof cellVal === "boolean" ? (
                             <span className="text-purple-600 dark:text-purple-400 font-semibold">
                               {cellVal ? "BENAR" : "SALAH"}

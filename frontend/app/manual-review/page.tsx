@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-
+import React, { useEffect, useMemo, useState, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-
 import { Loader2 } from "lucide-react";
-
 
 import {
   applyManualReviewFixes,
@@ -14,13 +12,13 @@ import {
   getManualReviewIssuesByDatasetId,
   validateManualValue,
 } from "@/lib/api";
-
 import {
   ManualEditRequest,
   ManualReviewApplyResponse,
   ManualReviewIssue,
   ManualValidationResult,
 } from "@/lib/types";
+import { getWorkflowState, saveWorkflowState } from "@/lib/workflow-store";
 
 import ManualReviewHeader from "@/components/manual-review/ManualReviewHeader";
 import ManualReviewNotice from "@/components/manual-review/ManualReviewNotice";
@@ -29,31 +27,23 @@ import ManualReviewQueue from "@/components/manual-review/ManualReviewQueue";
 import ManualReviewEmptyState from "@/components/manual-review/ManualReviewEmptyState";
 import ManualReviewSummary from "@/components/manual-review/ManualReviewSummary";
 
-export default function ManualReviewPage() {
-  return <ManualReviewInner />;
-}
-
-function ManualReviewInner() {
-
-  // Accept datasetId context: /manual-review?datasetId=ds_xxx
+function ManualReviewContent() {
   const searchParams = useSearchParams();
 
   const [datasetId, setDatasetId] = useState<string | null>(null);
-
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-
   const [issues, setIssues] = useState<ManualReviewIssue[]>([]);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [issuesLoaded, setIssuesLoaded] = useState(false);
 
-  const [validateLoading, setValidateLoading] = useState<string | null>(null); // issue id
+  const [validateLoading, setValidateLoading] = useState<string | null>(null);
   const [applyLoading, setApplyLoading] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [applyResult, setApplyResult] = useState<ManualReviewApplyResponse | null>(null);
 
-  const [draftEdits, setDraftEdits] = useState<Record<string, string>>({}); // issue id -> new value
+  const [draftEdits, setDraftEdits] = useState<Record<string, string>>({});
   const [validated, setValidated] = useState<Record<string, ManualValidationResult | null>>({});
   const [markedValidIssues, setMarkedValidIssues] = useState<Record<string, boolean>>({});
 
@@ -62,11 +52,18 @@ function ManualReviewInner() {
     return `${getManualReviewDownloadUrl(applyResult.download_id)}?ts=${Date.now()}`;
   }, [applyResult]);
 
+  const reportHref = useMemo(() => {
+    const id =
+      applyResult?.final_dataset_id ||
+      datasetId ||
+      getWorkflowState().cleanedDatasetId ||
+      getWorkflowState().datasetId;
+    return id ? `/report?datasetId=${encodeURIComponent(id)}` : "/report";
+  }, [applyResult, datasetId]);
+
   useEffect(() => {
     const datasetIdFromQuery = searchParams.get("datasetId");
     if (!datasetIdFromQuery) return;
-
-    // Avoid refetch loop
     setDatasetId((prev) => (prev === datasetIdFromQuery ? prev : datasetIdFromQuery));
   }, [searchParams]);
 
@@ -79,6 +76,7 @@ function ManualReviewInner() {
       try {
         setLoading(true);
         setError(null);
+        setIssuesLoaded(false);
 
         if (cancelled) return;
 
@@ -92,9 +90,11 @@ function ManualReviewInner() {
         const result = await getManualReviewIssuesByDatasetId(datasetId);
         if (cancelled) return;
         setIssues(result.manual_review_issues);
+        setIssuesLoaded(true);
       } catch (err: any) {
         if (cancelled) return;
         setError(err?.message || "Unable to load manual review from cleaned dataset.");
+        setIssuesLoaded(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -108,8 +108,7 @@ function ManualReviewInner() {
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
-
-
+    setDatasetId(null);
     setIssues([]);
     setError(null);
     setApplyResult(null);
@@ -117,6 +116,7 @@ function ManualReviewInner() {
     setDraftEdits({});
     setValidated({});
     setMarkedValidIssues({});
+    setIssuesLoaded(false);
   };
 
   const handleFindIssues = async () => {
@@ -128,9 +128,12 @@ function ManualReviewInner() {
 
     try {
       const result = await getManualReviewIssues(selectedFile);
+      setDatasetId(result.dataset_id);
       setIssues(result.manual_review_issues);
+      setIssuesLoaded(true);
     } catch (err: any) {
       setError(err?.message || "Unable to find manual review issues.");
+      setIssuesLoaded(true);
     } finally {
       setLoading(false);
     }
@@ -171,7 +174,11 @@ function ManualReviewInner() {
   };
 
   const onMarkValid = (issue: ManualReviewIssue) => {
-    setMarkedValidIssues((prev) => ({ ...prev, [issue.id]: true }));
+    setMarkedValidIssues((prev) => ({
+      ...prev,
+      [issue.id]: true,
+      [issue.stable_key]: true,
+    }));
   };
 
   const handleApply = async () => {
@@ -181,26 +188,24 @@ function ManualReviewInner() {
     const markedIds: string[] = [];
 
     for (const issue of issues) {
-      if (markedValidIssues[issue.id]) {
-        markedIds.push(issue.id);
-        continue;
-      }
-
       const newVal = draftEdits[issue.id];
       const valRes = validated[issue.id];
+      
+      const hasEdit = typeof newVal === "string" && newVal.trim() !== "";
 
-      // Include edit if:
-      // - User typed a non-empty value AND explicitly validated it as valid, OR
-      // - User typed a non-empty value but skipped validation (we still send it; backend applies the change)
-      if (typeof newVal === "string" && newVal.trim() !== "") {
-        // If they validated and it passed, include it
-        if (valRes?.is_valid === true) {
-          edits.push({ row_index: issue.row_index, column: issue.column, new_value: newVal.trim() });
-        } else if (!valRes) {
-          // Not yet validated — include anyway so user doesn't lose their work
-          edits.push({ row_index: issue.row_index, column: issue.column, new_value: newVal.trim() });
+      if (hasEdit) {
+        // If user typed something, treat it as an edit regardless of "markedValid" state.
+        // We accept the edit if they validated it and it passed, OR if they didn't validate it explicitly (we send it to backend to apply).
+        if (!valRes || valRes.is_valid === true) {
+          edits.push({
+            row_index: issue.row_index,
+            column: issue.column,
+            new_value: newVal.trim(),
+          });
         }
-        // If explicitly validated as invalid (valRes.is_valid === false), skip it
+      } else if (markedValidIssues[issue.id] || markedValidIssues[issue.stable_key]) {
+        // Only mark as valid (keep original data) if they didn't type a new value
+        markedIds.push(issue.stable_key);
       }
     }
 
@@ -212,13 +217,20 @@ function ManualReviewInner() {
       const res = await applyManualReviewFixes(selectedFile, datasetId, edits, markedIds);
       setApplyResult(res);
       setIssues([]);
+      saveWorkflowState({
+        finalDatasetId: res.final_dataset_id,
+        downloadId: res.download_id,
+        stage: "manual_reviewed",
+      });
     } catch (err: any) {
-      console.error("applyManualReviewFixes error:", err);
-      setApplyError(err?.message || "Gagal menerapkan perbaikan manual. Coba lagi.");
+      const msg = err?.message || "Gagal menerapkan perbaikan manual.";
+      setApplyError(msg);
     } finally {
       setApplyLoading(false);
     }
   };
+
+  const fromCleanFlow = Boolean(datasetId);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
@@ -235,7 +247,7 @@ function ManualReviewInner() {
               Meninjau Dataset yang Telah Dicuci Otomatis
             </h3>
             <p className="text-sm text-indigo-900/80 dark:text-indigo-100/80">
-              Anda sedang melihat isu-isu yang tersisa dari proses pencucian otomatis. Selesaikan tinjauan di bawah dan simpan hasilnya.
+              Hanya sel yang masih bermasalah setelah pembersihan otomatis. Data yang sudah benar tidak ditampilkan.
             </p>
           </div>
         ) : (
@@ -249,17 +261,22 @@ function ManualReviewInner() {
         )}
       </div>
 
-      {issues.length === 0 && loading && (
-        <div className="mt-8 text-sm text-slate-600 dark:text-slate-300">Finding issues…</div>
+      {loading && (
+        <div className="mt-8 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Memuat isu tinjauan manual…
+        </div>
       )}
 
       {!loading && error && issues.length === 0 && (
         <div className="mt-8 text-sm text-red-600 dark:text-red-400">{error}</div>
       )}
 
-      {!loading && !error && issues.length === 0 ? (
-        <ManualReviewEmptyState />
-      ) : (
+      {!loading && issuesLoaded && issues.length === 0 && !applyResult && (
+        <ManualReviewEmptyState fromCleanFlow={fromCleanFlow} reportHref={reportHref} />
+      )}
+
+      {issues.length > 0 && (
         <div className="space-y-8">
           <ManualReviewQueue
             issues={issues}
@@ -282,10 +299,10 @@ function ManualReviewInner() {
               {applyLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Applying fixes…
+                  Menerapkan perbaikan…
                 </>
               ) : (
-                "Apply Manual Fixes"
+                "Terapkan Perbaikan Manual"
               )}
             </button>
           </div>
@@ -293,15 +310,22 @@ function ManualReviewInner() {
           {applyError && (
             <div className="text-sm text-red-600 dark:text-red-400 text-center">{applyError}</div>
           )}
+        </div>
+      )}
 
-          {applyResult && (
-            <div className="flex flex-col items-center gap-4">
-              <ManualReviewSummary summary={applyResult} downloadUrl={downloadUrl} />
-            </div>
-          )}
+      {applyResult && (
+        <div className="flex flex-col items-center gap-4 mt-8">
+          <ManualReviewSummary summary={applyResult} downloadUrl={downloadUrl} reportHref={reportHref} />
         </div>
       )}
     </div>
   );
 }
 
+export default function ManualReviewPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-6xl px-4 py-12 text-sm text-slate-500">Memuat…</div>}>
+      <ManualReviewContent />
+    </Suspense>
+  );
+}

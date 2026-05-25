@@ -2,8 +2,9 @@
 
 import React from "react";
 import { ManualReviewIssue, ManualValidationResult } from "@/lib/types";
-import ManualEditCard from "./ManualEditCard";
+import ManualReviewTable from "./ManualReviewTable";
 
+/** @deprecated Use ManualReviewTable — kept as alias for imports */
 export default function ManualReviewQueue({
   issues,
   draftEdits,
@@ -23,28 +24,17 @@ export default function ManualReviewQueue({
   onValidate: (issue: ManualReviewIssue) => void;
   onMarkValid: (issue: ManualReviewIssue) => void;
 }) {
-  if (!issues.length) return null;
-
   return (
-    <div className="space-y-4">
-      {issues.map((issue) => {
-        const value = draftEdits[issue.id] ?? issue.current_value ?? "";
-        const validatedResult = validated[issue.id] ?? null;
-        return (
-          <ManualEditCard
-            key={issue.id}
-            issue={issue}
-            value={value}
-            validatedResult={validatedResult}
-            validateLoading={validateLoadingId === issue.id}
-            markedValid={!!markedValidIssues[issue.id]}
-            onValueChange={(v) => onEditChange(issue.id, v)}
-            onValidate={() => onValidate(issue)}
-            onMarkValid={() => onMarkValid(issue)}
-          />
-        );
-      })}
-    </div>
+    <ManualReviewTable
+      issues={issues}
+      draftEdits={draftEdits}
+      validated={validated}
+      validateLoadingId={validateLoadingId}
+      markedValidIssues={markedValidIssues}
+      onEditChange={onEditChange}
+      onValidate={onValidate}
+      onMarkValid={onMarkValid}
+    />
   );
 }
 

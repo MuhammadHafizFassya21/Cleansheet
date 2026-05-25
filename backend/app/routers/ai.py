@@ -8,7 +8,7 @@ router = APIRouter()
 
 
 @router.post("/insight", response_model=AIInsightResponse)
-async def generate_insight(req: AIInsightRequest):
+def generate_insight(req: AIInsightRequest):
     try:
         payload = req.model_dump()
         result = fallback_or_generate(payload)

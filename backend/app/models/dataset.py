@@ -15,3 +15,4 @@ class DatasetPreviewResponse(BaseModel):
     column_count: int
     columns: List[ColumnMetadata]
     preview: List[Dict[str, Any]]
+    preview_issues: List[Dict[str, Any]] = []

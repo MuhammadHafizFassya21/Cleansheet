@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import health, upload, analyze, clean, manual_review
+from .routers import health, upload, analyze, clean, manual_review, quality_gate
 from .routers import ai
 
 app = FastAPI(
@@ -48,6 +48,7 @@ app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
 app.include_router(analyze.router, prefix="/api/analyze", tags=["Analyze"])
 app.include_router(clean.router, prefix="/api/clean", tags=["Clean"])
 app.include_router(manual_review.router, prefix="/api/manual-review", tags=["Manual Review"])
+app.include_router(quality_gate.router, prefix="/api/quality-gate", tags=["Quality Gate"])
 app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
 
 

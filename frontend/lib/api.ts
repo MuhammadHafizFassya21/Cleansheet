@@ -1,13 +1,49 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+/** Browser dev: same-origin proxy (/api-backend). Server/direct: localhost:8000 */
+export function getApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (envUrl) return envUrl.replace(/\/$/, "");
+  if (typeof window !== "undefined") return "/api-backend";
+  return "http://127.0.0.1:8000";
+}
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 10000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(
+        `Permintaan ke API melebihi batas waktu (${timeoutMs / 1000}s). Pastikan backend berjalan di port 8000.`
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 async function getErrorMessage(response: Response, fallback: string) {
-  // Prefer JSON `{detail: ...}` (FastAPI), fall back to plain text, then status text.
   try {
     const data: any = await response.clone().json();
     if (typeof data?.detail === "string" && data.detail.trim()) return data.detail;
 
-    // FastAPI validation errors typically return `{ detail: [{ loc, msg, type }, ...] }`
+    if (data?.detail && typeof data.detail === "object" && !Array.isArray(data.detail)) {
+      const d = data.detail as Record<string, unknown>;
+      if (typeof d.message === "string") {
+        const parts = [d.message];
+        const unresolved = d.unresolved ?? d.validation_errors ?? d.blocking_issues;
+        if (Array.isArray(unresolved) && unresolved.length) {
+          parts.push(unresolved.slice(0, 5).join("; "));
+        }
+        return parts.join(" — ");
+      }
+    }
+
     if (Array.isArray(data?.detail) && data.detail.length) {
       const first = data.detail[0];
       const msg = typeof first?.msg === "string" ? first.msg : null;
@@ -41,9 +77,11 @@ async function getErrorMessage(response: Response, fallback: string) {
 }
 
 export async function getBackendHealth() {
-  const response = await fetch(`${API_BASE_URL}/health`, {
-    cache: "no-store",
-  });
+  const response = await fetchWithTimeout(
+    `${getApiBaseUrl()}/health`,
+    { cache: "no-store" },
+    5000
+  );
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Backend health check failed"));
@@ -52,50 +90,71 @@ export async function getBackendHealth() {
   return response.json();
 }
 
-export async function uploadCsvFile(file: File) {
+export async function uploadDataFile(file: File) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${API_BASE_URL}/api/upload/`, {
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/upload/`, {
     method: "POST",
     body: formData,
-  });
+  }, 30000);
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to upload CSV file"));
+    throw new Error(await getErrorMessage(response, "Failed to upload file"));
   }
 
   return response.json();
 }
 
-export async function analyzeCsvFile(file: File) {
+/** @deprecated Use uploadDataFile */
+export const uploadCsvFile = uploadDataFile;
+
+export async function analyzeDataFile(file: File) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${API_BASE_URL}/api/analyze/`, {
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/analyze/`, {
     method: "POST",
     body: formData,
-  });
+  }, 30000);
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to analyze CSV file"));
+    throw new Error(await getErrorMessage(response, "Failed to analyze file"));
+  }
+
+  return response.json();
+}
+
+/** @deprecated Use analyzeDataFile */
+export const analyzeCsvFile = analyzeDataFile;
+
+export async function analyzeDatasetById(datasetId: string) {
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/analyze/${datasetId}`, {
+    method: "GET",
+    cache: "no-store",
+  }, 30000);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to analyze stored dataset"));
   }
 
   return response.json();
 }
 
 export async function getCleaningPreview(
-  file: File,
-  selectedActions: string[] = []
+  file: File | null,
+  selectedActions: string[] = [],
+  datasetId?: string | null
 ) {
   const formData = new FormData();
-  formData.append("file", file);
+  if (file) formData.append("file", file);
+  if (datasetId) formData.append("dataset_id", datasetId);
   formData.append("selected_actions", JSON.stringify(selectedActions));
 
-  const response = await fetch(`${API_BASE_URL}/api/clean/preview`, {
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/clean/preview`, {
     method: "POST",
     body: formData,
-  });
+  }, 30000);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Unable to generate cleaning preview."));
@@ -105,38 +164,33 @@ export async function getCleaningPreview(
 }
 
 export async function applyCleaningActions(
-  file: File,
-  selectedActions: string[]
+  file: File | null,
+  selectedActions: string[],
+  datasetId?: string | null
 ) {
   const formData = new FormData();
-  formData.append("file", file);
+  if (file) formData.append("file", file);
+  if (datasetId) formData.append("dataset_id", datasetId);
   formData.append("selected_actions", JSON.stringify(selectedActions));
 
-  const response = await fetch(`${API_BASE_URL}/api/clean/apply`, {
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/clean/apply`, {
     method: "POST",
     body: formData,
-  });
+  }, 30000);
 
   if (!response.ok) {
-    const message = await getErrorMessage(response, "Unable to apply cleaning actions.");
-    // Useful while debugging: see exact HTTP status + any non-JSON payload.
-    console.error("applyCleaningActions failed", {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url,
-    });
-    throw new Error(message);
+    throw new Error(await getErrorMessage(response, "Unable to apply cleaning actions."));
   }
 
   return response.json();
 }
 
 export async function generateAIInsight(payload: any) {
-  const response = await fetch(`${API_BASE_URL}/api/ai/insight`, {
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/ai/insight`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
-  });
+  }, 30000);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Unable to generate AI insight."));
@@ -146,19 +200,17 @@ export async function generateAIInsight(payload: any) {
 }
 
 export function getCleanedCsvDownloadUrl(downloadId: string) {
-  return `${API_BASE_URL}/api/clean/download/${downloadId}`;
+  return `${getApiBaseUrl()}/api/clean/download/${downloadId}`;
 }
-
-// ---------- Manual Review (Phase 11.6) ----------
 
 export async function getManualReviewIssues(file: File) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${API_BASE_URL}/api/manual-review/issues`, {
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/manual-review/issues`, {
     method: "POST",
     body: formData,
-  });
+  }, 30000);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Unable to find manual review issues."));
@@ -168,26 +220,19 @@ export async function getManualReviewIssues(file: File) {
 }
 
 export async function getManualReviewIssuesByDatasetId(datasetId: string) {
-  const response = await fetch(`${API_BASE_URL}/api/manual-review/issues/${datasetId}`, {
-    method: "GET",
-  });
+  const response = await fetchWithTimeout(
+    `${getApiBaseUrl()}/api/manual-review/issues/${datasetId}`,
+    { method: "GET", cache: "no-store" },
+    30000
+  );
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Unable to find manual review issues for the dataset."));
+    throw new Error(
+      await getErrorMessage(response, "Unable to find manual review issues for the dataset.")
+    );
   }
 
   return response.json();
-}
-
-export async function getCsvFileFromCleanDownloadId(cleanDownloadId: string): Promise<File> {
-  const res = await fetch(getCleanedCsvDownloadUrl(cleanDownloadId));
-  if (!res.ok) {
-    throw new Error(await getErrorMessage(res, "Unable to fetch cleaned CSV."));
-  }
-
-  const blob = await res.blob();
-  const fileName = `cleaned_${cleanDownloadId}.csv`;
-  return new File([blob], fileName, { type: "text/csv" });
 }
 
 export async function validateManualValue(payload: {
@@ -196,7 +241,7 @@ export async function validateManualValue(payload: {
   value: string;
   issue_type: string;
 }) {
-  const response = await fetch(`${API_BASE_URL}/api/manual-review/validate`, {
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/manual-review/validate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -216,19 +261,15 @@ export async function applyManualReviewFixes(
   markedValidIssues: string[]
 ) {
   const formData = new FormData();
-  if (file) {
-    formData.append("file", file);
-  }
-  if (datasetId) {
-    formData.append("dataset_id", datasetId);
-  }
+  if (file) formData.append("file", file);
+  if (datasetId) formData.append("dataset_id", datasetId);
   formData.append("edits", JSON.stringify(edits));
   formData.append("marked_valid_issues", JSON.stringify(markedValidIssues));
 
-  const response = await fetch(`${API_BASE_URL}/api/manual-review/apply`, {
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/manual-review/apply`, {
     method: "POST",
     body: formData,
-  });
+  }, 30000);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Unable to apply manual fixes."));
@@ -237,7 +278,30 @@ export async function applyManualReviewFixes(
   return response.json();
 }
 
-// Uses the same in-memory download endpoint as clean/download
 export function getManualReviewDownloadUrl(downloadId: string) {
   return getCleanedCsvDownloadUrl(downloadId);
+}
+
+export async function generateReportFromDatasetId(datasetId: string) {
+  const analysisResult = await analyzeDatasetById(datasetId);
+  const previewResult = await getCleaningPreview(null, [], datasetId);
+
+  const insightPayload = {
+    dataset_id: analysisResult.dataset_id,
+    row_count: analysisResult.row_count ?? 0,
+    column_count: analysisResult.column_count ?? 0,
+    quality_score: analysisResult.quality_score,
+    status: analysisResult.status,
+    issue_summary: analysisResult.issue_summary,
+    top_problem_columns: analysisResult.top_problem_columns,
+    recommended_actions: previewResult.recommended_actions ?? null,
+  };
+
+  const insightResult = await generateAIInsight(insightPayload);
+
+  return {
+    analysis: analysisResult,
+    preview: previewResult,
+    insight: insightResult,
+  };
 }

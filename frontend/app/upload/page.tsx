@@ -2,11 +2,12 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { uploadCsvFile } from "@/lib/api";
+import { uploadDataFile } from "@/lib/api";
 import { DatasetPreviewResponse } from "@/lib/types";
+import { saveWorkflowState } from "@/lib/workflow-store";
 import FileUploadBox from "@/components/upload/FileUploadBox";
 import DatasetPreviewTable from "@/components/upload/DatasetPreviewTable";
-import { Upload, ArrowRight, ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { Upload, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 
 export default function UploadPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -17,7 +18,7 @@ export default function UploadPage() {
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
     setError(null);
-    setPreviewData(null); // Reset preview when file changes
+    setPreviewData(null);
   };
 
   const handleUpload = async () => {
@@ -26,11 +27,21 @@ export default function UploadPage() {
     try {
       setUploading(true);
       setError(null);
-      const data = await uploadCsvFile(selectedFile);
+      const data = await uploadDataFile(selectedFile);
       setPreviewData(data);
+
+      saveWorkflowState({
+        datasetId: data.dataset_id,
+        fileName: data.file_name,
+        stage: "uploaded",
+        analysis: null,
+        cleanedDatasetId: null,
+        finalDatasetId: null,
+        downloadId: null,
+      });
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || "Terjadi kesalahan saat mengunggah berkas CSV.");
+      setError(err?.message || "Terjadi kesalahan saat mengunggah berkas.");
     } finally {
       setUploading(false);
     }
@@ -42,20 +53,22 @@ export default function UploadPage() {
     setError(null);
   };
 
+  const dashboardHref = previewData
+    ? `/dashboard?datasetId=${encodeURIComponent(previewData.dataset_id)}`
+    : "/dashboard";
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:py-16">
-      {/* Header */}
       <div className="text-center mb-10">
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
           Upload Dataset
         </h1>
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-          Unggah berkas CSV Anda untuk melihat struktur data dan pratinjau kolom sebelum menjalankan pembersihan kualitas data.
+          Unggah berkas data (CSV, Excel, TSV) untuk melihat struktur dan pratinjau sebelum analisis kualitas.
         </p>
       </div>
 
       <div className="max-w-3xl mx-auto space-y-8">
-        {/* Upload Box container */}
         {!previewData && (
           <div className="p-6 rounded-2xl border border-slate-200/80 bg-white/50 dark:border-slate-800 dark:bg-slate-900/30">
             <FileUploadBox
@@ -87,7 +100,7 @@ export default function UploadPage() {
                   ) : (
                     <>
                       <Upload className="h-3.5 w-3.5" />
-                      <span>Unggah & Pratinjau CSV</span>
+                      <span>Unggah & Pratinjau</span>
                     </>
                   )}
                 </button>
@@ -96,13 +109,11 @@ export default function UploadPage() {
           </div>
         )}
 
-        {/* Preview and Navigation Area */}
         {previewData && (
           <div className="space-y-8">
-            {/* Success Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-emerald-100 bg-emerald-50/30 dark:border-emerald-950/20 dark:bg-emerald-950/10 gap-4">
               <div className="text-xs text-emerald-700 dark:text-emerald-400">
-                Berkas **{previewData.file_name}** berhasil diunggah dan dianalisis awal.
+                Berkas <strong>{previewData.file_name}</strong> berhasil diunggah. Dataset tersimpan — lanjut ke Dashboard tanpa unggah ulang.
               </div>
               <div className="flex gap-3">
                 <button
@@ -114,7 +125,7 @@ export default function UploadPage() {
                   Ganti File
                 </button>
                 <Link
-                  href="/dashboard"
+                  href={dashboardHref}
                   className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-600 transition-colors shadow-xs"
                 >
                   Lanjut ke Dashboard
@@ -123,7 +134,6 @@ export default function UploadPage() {
               </div>
             </div>
 
-            {/* Dataset Preview Component */}
             <DatasetPreviewTable dataset={previewData} />
           </div>
         )}

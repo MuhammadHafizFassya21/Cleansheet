@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 class ManualReviewIssue(BaseModel):
     id: str
+    stable_key: str  # row:column:type — persists across re-scans
     type: str
     severity: str
     row_index: int
@@ -43,11 +44,15 @@ class ManualReviewIssuesResponse(BaseModel):
 
 class ManualReviewApplyResponse(BaseModel):
     dataset_id: str
-    final_dataset_id: str  # NEW - dataset final setelah manual review
+    final_dataset_id: str
     total_review_issues: int
     fixed_count: int
     marked_valid_count: int
     remaining_issues_count: int
     download_id: Optional[str] = None
     download_ready: bool
+    quality_gate_passed: bool = False
+    quality_score: int = 0
+    quality_status: str = ""
+    gate_messages: list[str] = []
 

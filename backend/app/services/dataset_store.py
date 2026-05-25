@@ -23,18 +23,24 @@ def _cleanup_expired_datasets() -> None:
         DATASETS.pop(ds_id, None)
 
 
-def save_dataset(df: pd.DataFrame, file_name: str, stage: str, metadata: dict = None) -> str:
+def save_dataset(
+    df: pd.DataFrame,
+    file_name: str,
+    stage: str,
+    metadata: dict = None,
+    dataset_id: str | None = None,
+) -> str:
     """Save a dataset and return its unique ID."""
     _cleanup_expired_datasets()
-    dataset_id = f"ds_{uuid.uuid4().hex[:12]}"
-    DATASETS[dataset_id] = {
+    ds_id = dataset_id or f"ds_{uuid.uuid4().hex[:12]}"
+    DATASETS[ds_id] = {
         "df": df.copy(),
         "file_name": file_name,
         "stage": stage,
         "created_at": time.time(),
         "metadata": metadata or {},
     }
-    return dataset_id
+    return ds_id
 
 
 def get_dataset(dataset_id: str) -> dict[str, Any] | None:

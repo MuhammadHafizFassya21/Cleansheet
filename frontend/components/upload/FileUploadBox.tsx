@@ -2,6 +2,12 @@
 
 import React, { useState, useRef } from "react";
 import { Upload, File, AlertCircle, Check } from "lucide-react";
+import {
+  isSupportedDataFile,
+  MAX_UPLOAD_BYTES,
+  SUPPORTED_DATA_ACCEPT,
+  supportedFormatsLabel,
+} from "@/lib/supported-file-types";
 
 interface FileUploadBoxProps {
   selectedFile: File | null;
@@ -22,16 +28,13 @@ export default function FileUploadBox({
 
   const validateAndSelectFile = (file: File) => {
     setLocalError(null);
-    
-    // Check extension (case-insensitive)
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      setLocalError("Hanya berkas berekstensi .csv yang didukung.");
+
+    if (!isSupportedDataFile(file.name)) {
+      setLocalError(`Format tidak didukung. Gunakan: ${supportedFormatsLabel()}`);
       return;
     }
-    
-    // Check file size (5MB limit)
-    const MAX_SIZE = 5 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
+
+    if (file.size > MAX_UPLOAD_BYTES) {
       setLocalError("Ukuran berkas melebihi batasan 5 MB.");
       return;
     }
@@ -91,7 +94,7 @@ export default function FileUploadBox({
           ref={inputRef}
           type="file"
           className="hidden"
-          accept=".csv"
+          accept={SUPPORTED_DATA_ACCEPT}
           onChange={handleChange}
         />
 
@@ -124,10 +127,10 @@ export default function FileUploadBox({
               <Upload className="h-6 w-6" />
             </div>
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Pilih berkas CSV Anda atau seret ke sini
+              Pilih berkas data Anda atau seret ke sini
             </p>
             <p className="mt-1.5 text-xs text-slate-400">
-              Format yang didukung: .csv (Maksimal 5MB)
+              Format: {supportedFormatsLabel()} (maks. 5 MB)
             </p>
             <button
               type="button"

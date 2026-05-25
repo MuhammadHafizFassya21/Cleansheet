@@ -7,62 +7,39 @@ from fastapi.responses import StreamingResponse
 
 from ..models.cleaning import CleaningPreviewResponse, CleaningApplyResponse
 from ..services import parser_service, quality_engine, cleaning_engine, dataset_store
+from ..services import quality_gate_service
 from ..services.file_store import save_cleaned_csv, get_cleaned_csv
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/preview", response_model=CleaningPreviewResponse)
-async def cleaning_preview(
-    file: UploadFile = File(...),
-    selected_actions: str = Form(default="[]"),
-):
-    """
-    Generate cleaning recommendations and preview based on uploaded CSV.
-    """
+def _load_dataframe(file: UploadFile | None, dataset_id: str | None):
+    if dataset_id:
+        stored = dataset_store.get_dataset(dataset_id)
+        if not stored:
+            raise HTTPException(status_code=404, detail="Dataset not found or expired.")
+        return stored["df"], stored.get("file_name", "dataset.csv"), dataset_id
+
+    if not file:
+        raise HTTPException(status_code=400, detail="Either file or dataset_id must be provided.")
+
     try:
-        contents = await file.read()
+        contents = file.file.read()
     except Exception:
-        raise HTTPException(status_code=400, detail="Unable to analyze dataset.")
+        raise HTTPException(status_code=400, detail="Unable to read file.")
 
     file_size = len(contents)
-    parser_service.validate_csv_file(file, file_size)
+    file_name = file.filename or "dataset.csv"
+    parser_service.validate_data_file(file, file_size)
 
-    df = parser_service.read_csv_file(contents)
+    df = parser_service.read_data_file(contents, file_name)
     if df.empty:
-        raise HTTPException(status_code=400, detail="CSV file is empty.")
+        raise HTTPException(status_code=400, detail="File is empty.")
 
-    analysis = quality_engine.analyze_dataframe(df, f"ds_{uuid.uuid4().hex[:8]}")
-    recommended_actions = cleaning_engine.get_cleaning_recommendations(df, analysis.issues)
-
-    try:
-        if isinstance(selected_actions, str):
-            selected_actions_list = json.loads(selected_actions)
-        else:
-            selected_actions_list = selected_actions
-    except json.JSONDecodeError:
-        selected_actions_list = []
-
-    valid_action_ids = {action.id for action in recommended_actions}
-    selected_actions_list = [a for a in selected_actions_list if a in valid_action_ids]
-
-    preview_changes = []
-    total_preview_changes = 0
-
-    if selected_actions_list:
-        preview_changes, total_preview_changes = cleaning_engine.generate_cleaning_preview(
-            df, selected_actions_list, limit=100
-        )
-
-    return CleaningPreviewResponse(
-        dataset_id=analysis.dataset_id,
-        recommended_actions=recommended_actions,
-        selected_actions=selected_actions_list,
-        preview_changes=preview_changes,
-        preview_limit=100,
-        total_preview_changes=total_preview_changes,
-    )
+    new_id = f"ds_{uuid.uuid4().hex[:8]}"
+    dataset_store.save_dataset(df, file_name, stage="uploaded", dataset_id=new_id)
+    return df, file_name, new_id
 
 
 def _parse_selected_actions(selected_actions: str) -> list[str]:
@@ -81,29 +58,53 @@ def _parse_selected_actions(selected_actions: str) -> list[str]:
     return [selected_actions.strip()] if selected_actions.strip() else []
 
 
-@router.post("/apply", response_model=CleaningApplyResponse)
-async def cleaning_apply(
-    file: UploadFile = File(...),
+@router.post("/preview", response_model=CleaningPreviewResponse)
+def cleaning_preview(
+    file: UploadFile = File(None),
+    dataset_id: str = Form(None),
     selected_actions: str = Form(default="[]"),
 ):
-    """
-    Apply selected cleaning actions to uploaded CSV and prepare cleaned CSV for download.
-    Also stores the cleaned dataset and returns manual review metadata.
-    """
-    try:
-        contents = await file.read()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Unable to apply cleaning actions.")
+    df, _, source_dataset_id = _load_dataframe(file, dataset_id)
 
-    file_size = len(contents)
-    parser_service.validate_csv_file(file, file_size)
+    analysis = quality_engine.analyze_dataframe(df, source_dataset_id)
+    recommended_actions = cleaning_engine.get_cleaning_recommendations(df, analysis.issues)
 
-    try:
-        df = parser_service.read_csv_file(contents)
-    except HTTPException as e:
-        raise e
-    except Exception:
-        raise HTTPException(status_code=400, detail="Unable to parse CSV file.")
+    selected_actions_list = _parse_selected_actions(selected_actions)
+    valid_action_ids = {action.id for action in recommended_actions}
+    selected_actions_list = [a for a in selected_actions_list if a in valid_action_ids]
+
+    preview_changes = []
+    total_preview_changes = 0
+    is_already_clean = (
+        len(recommended_actions) == 0
+        or all(a.affected_cells == 0 for a in recommended_actions)
+    )
+
+    if selected_actions_list:
+        preview_changes, total_preview_changes = cleaning_engine.generate_cleaning_preview(
+            df, selected_actions_list, limit=100
+        )
+        if total_preview_changes == 0 and not is_already_clean:
+            is_already_clean = True
+
+    return CleaningPreviewResponse(
+        dataset_id=source_dataset_id,
+        recommended_actions=recommended_actions,
+        selected_actions=selected_actions_list,
+        preview_changes=preview_changes,
+        preview_limit=100,
+        total_preview_changes=total_preview_changes,
+        is_already_clean=is_already_clean,
+    )
+
+
+@router.post("/apply", response_model=CleaningApplyResponse)
+def cleaning_apply(
+    file: UploadFile = File(None),
+    dataset_id: str = Form(None),
+    selected_actions: str = Form(default="[]"),
+):
+    df, original_name, source_dataset_id = _load_dataframe(file, dataset_id)
 
     selected_actions_list = _parse_selected_actions(selected_actions)
 
@@ -124,54 +125,37 @@ async def cleaning_apply(
         if "Invalid selected cleaning action" in msg:
             raise HTTPException(status_code=400, detail="Invalid selected cleaning action.")
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error while applying cleaning actions")
         raise HTTPException(status_code=500, detail="Internal error while applying cleaning actions.")
 
-    original_name = file.filename or "dataset.csv"
     cleaned_file_name = f"cleaned_{original_name}"
 
-    try:
-        csv_bytes = cleaning_engine.dataframe_to_csv_bytes(cleaned_df)
-    except Exception:
-        logger.exception("Unexpected error while converting cleaned dataframe to CSV")
-        raise HTTPException(status_code=500, detail="Internal error while generating cleaned CSV.")
+    final_df, gate = quality_gate_service.run_quality_gate(
+        cleaned_df, apply_safety_net=True
+    )
 
-    download_id = save_cleaned_csv(csv_bytes, cleaned_file_name)
-
-    # NEW: Save cleaned dataframe to dataset store for manual review
     cleaned_dataset_id = dataset_store.save_dataset(
-        cleaned_df,
-        file.filename or "dataset.csv",
-        stage="auto_cleaned"
+        final_df,
+        cleaned_file_name,
+        stage="auto_cleaned",
     )
 
-    # NEW: Re-run analysis on cleaned dataframe to detect remaining issues
-    cleaned_analysis = quality_engine.analyze_dataframe(
-        cleaned_df,
-        cleaned_dataset_id
-    )
+    manual_issues = gate.manual_issues
+    remaining_issue_types = list({issue.type for issue in manual_issues})
 
-    # NEW: Filter manual review issues only
-    manual_review_issue_types = {
-        "invalid_email",
-        "invalid_phone",
-        "suspicious_negative_number",
-        "strange_character"
-    }
-    remaining_manual_review_issues = [
-        issue for issue in cleaned_analysis.issues
-        if issue.type in manual_review_issue_types
-    ]
-    
-    # NEW: Count and collect issue types
-    remaining_issue_types = list(set(
-        issue.type for issue in remaining_manual_review_issues
-    ))
-    
+    download_id = ""
+    if gate.passed:
+        try:
+            csv_bytes = cleaning_engine.dataframe_to_csv_bytes(final_df)
+            download_id = save_cleaned_csv(csv_bytes, cleaned_file_name)
+        except Exception:
+            logger.exception("Unexpected error while converting cleaned dataframe to CSV")
+            raise HTTPException(status_code=500, detail="Internal error while generating cleaned CSV.")
+
     return CleaningApplyResponse(
-        dataset_id=f"ds_{uuid.uuid4().hex[:8]}",
-        cleaned_dataset_id=cleaned_dataset_id,  # NEW
+        dataset_id=source_dataset_id,
+        cleaned_dataset_id=cleaned_dataset_id,
         selected_actions=actions_applied,
         cleaned_file_name=cleaned_file_name,
         original_row_count=original_row_count,
@@ -179,16 +163,21 @@ async def cleaning_apply(
         rows_removed=rows_removed,
         cells_modified=cells_modified,
         actions_applied=actions_applied,
-        download_ready=True,
-        download_id=download_id,
-        has_manual_review_issues=len(remaining_manual_review_issues) > 0,  # NEW
-        remaining_manual_review_count=len(remaining_manual_review_issues),  # NEW
-        remaining_manual_review_issue_types=remaining_issue_types,  # NEW
+        download_ready=gate.passed and bool(download_id),
+        download_id=download_id or "",
+        has_manual_review_issues=gate.manual_review_count > 0,
+        remaining_manual_review_count=gate.manual_review_count,
+        remaining_manual_review_issue_types=remaining_issue_types,
+        quality_gate_passed=gate.passed,
+        quality_score=gate.quality_score,
+        quality_status=gate.status,
+        blocking_issue_count=gate.blocking_issue_count,
+        gate_messages=gate.messages,
     )
 
 
 @router.get("/download/{download_id}")
-async def download_cleaned_csv(download_id: str):
+def download_cleaned_csv(download_id: str):
     payload = get_cleaned_csv(download_id)
     if not payload:
         raise HTTPException(status_code=404, detail="Cleaned file not found or expired.")

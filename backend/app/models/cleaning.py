@@ -26,9 +26,14 @@ class CleaningApplyResponse(BaseModel):
     actions_applied: list[str]
     download_ready: bool
     download_id: str
-    has_manual_review_issues: bool  # NEW - ada issue untuk manual review?
-    remaining_manual_review_count: int  # NEW - berapa banyak?
-    remaining_manual_review_issue_types: list[str]  # NEW - tipe issue apa saja?
+    has_manual_review_issues: bool
+    remaining_manual_review_count: int
+    remaining_manual_review_issue_types: list[str]
+    quality_gate_passed: bool = False
+    quality_score: int = 0
+    quality_status: str = ""
+    blocking_issue_count: int = 0
+    gate_messages: list[str] = []
 
 
 class CleaningSummary(BaseModel):
@@ -55,3 +60,4 @@ class CleaningPreviewResponse(BaseModel):
     preview_changes: list[CleaningPreviewChange]
     preview_limit: int
     total_preview_changes: int
+    is_already_clean: bool = False

@@ -93,6 +93,7 @@ export type CleaningPreviewResponse = {
   preview_changes: CleaningPreviewChange[];
   preview_limit: number;
   total_preview_changes: number;
+  is_already_clean?: boolean;
 };
 
 export type AIInsightRequest = {
@@ -130,13 +131,23 @@ export type CleaningApplyResponse = {
   has_manual_review_issues: boolean;
   remaining_manual_review_count: number;
   remaining_manual_review_issue_types: string[];
+  quality_gate_passed?: boolean;
+  quality_score?: number;
+  quality_status?: string;
+  blocking_issue_count?: number;
+  gate_messages?: string[];
 };
 
 // ---------- Manual Review (Phase 11.6) ----------
 
 export type ManualReviewIssue = {
   id: string;
-  type: "invalid_email" | "invalid_phone" | "suspicious_negative_number";
+  stable_key: string;
+  type:
+    | "invalid_email"
+    | "invalid_phone"
+    | "suspicious_negative_number"
+    | "strange_character";
   severity: "critical" | "warning" | "info" | string;
   row_index: number;
   column: string;
@@ -170,5 +181,9 @@ export type ManualReviewApplyResponse = {
   remaining_issues_count: number;
   download_id: string | null;
   download_ready: boolean;
+  quality_gate_passed?: boolean;
+  quality_score?: number;
+  quality_status?: string;
+  gate_messages?: string[];
 };
 

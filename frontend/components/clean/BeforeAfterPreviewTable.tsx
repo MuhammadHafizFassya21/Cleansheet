@@ -1,11 +1,14 @@
 "use client";
 
 import React from "react";
+import { CheckCircle2 } from "lucide-react";
 import { CleaningPreviewChange } from "@/lib/types";
 
 interface BeforeAfterPreviewTableProps {
   changes: CleaningPreviewChange[];
   totalChanges: number;
+  previewCompleted?: boolean;
+  isAlreadyClean?: boolean;
 }
 
 const actionLabel = (actionId: string) => {
@@ -22,15 +25,26 @@ const actionLabel = (actionId: string) => {
 export default function BeforeAfterPreviewTable({
   changes,
   totalChanges,
+  previewCompleted = false,
+  isAlreadyClean = false,
 }: BeforeAfterPreviewTableProps) {
   return (
     <div className="rounded-3xl border border-slate-200/80 bg-white/90 dark:border-slate-800 dark:bg-slate-950/80 p-5 shadow-sm">
       <div className="mb-5">
         <p className="text-sm font-semibold text-slate-900 dark:text-white">Pratinjau Sebelum vs Sesudah</p>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Menampilkan {changes.length} dari {totalChanges} perubahan
+          {isAlreadyClean
+            ? "Data sudah bersih — tidak ada perubahan untuk ditampilkan."
+            : `Menampilkan ${changes.length} dari ${totalChanges} perubahan`}
         </p>
       </div>
+
+      {isAlreadyClean && previewCompleted && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-200">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Data sudah bersih. Tidak ada perbaikan yang diperlukan untuk aksi yang Anda pilih.
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-xs border-collapse">
@@ -48,7 +62,11 @@ export default function BeforeAfterPreviewTable({
             {changes.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                  Tidak ada perubahan untuk dipratinjau. Pilih aksi pembersihan untuk melihat perubahan.
+                  {isAlreadyClean
+                    ? "Tidak ada perubahan — dataset sudah memenuhi kriteria pembersihan."
+                    : previewCompleted
+                    ? "Tidak ada perubahan untuk aksi terpilih."
+                    : "Pilih aksi pembersihan lalu klik Pratinjau Perbaikan Terpilih."}
                 </td>
               </tr>
             ) : (

@@ -7,6 +7,7 @@ const ISSUE_TYPE_LABELS: Record<string, string> = {
   invalid_email: "Email Tidak Valid",
   invalid_phone: "Nomor HP Tidak Valid",
   suspicious_negative_number: "Angka Negatif Mencurigakan",
+  strange_character: "Karakter Aneh",
 };
 
 export default function ManualEditCard({
@@ -111,7 +112,7 @@ export default function ManualEditCard({
               disabled={markedValid}
               className="inline-flex items-center justify-center rounded-xl border border-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 transition-colors dark:text-emerald-300 dark:hover:bg-emerald-950/30"
             >
-              {markedValid ? "✓ Valid" : "Tandai Valid"}
+              {markedValid ? "✓ Diabaikan" : "Abaikan (Data Asli Benar)"}
             </button>
           </div>
 

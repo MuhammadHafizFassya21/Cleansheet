@@ -104,13 +104,17 @@ def _has_whitespace_issue(value: str) -> bool:
 
 
 def _has_strange_characters(value: str) -> bool:
-    if "" in value:
-        return True
+    """True only when the cell still contains characters that need human review."""
+    if not value or not isinstance(value, str):
+        return False
     if EMOJI_REGEX.search(value):
         return True
     if CONTROL_CHAR_REGEX.search(value):
         return True
     if REPEATED_SYMBOL_REGEX.search(value):
+        return True
+    # Unicode replacement / corrupted encoding marker
+    if "\ufffd" in value:
         return True
     if any(not ch.isprintable() for ch in value):
         return True
@@ -118,7 +122,15 @@ def _has_strange_characters(value: str) -> bool:
 
 
 def _is_valid_email(value: str) -> bool:
-    return bool(EMAIL_REGEX.match(value.strip()))
+    v = value.strip()
+    if not v or len(v) > 254:
+        return False
+    if ".." in v or v.count("@") != 1:
+        return False
+    local, _, domain = v.partition("@")
+    if not local or not domain or "." not in domain:
+        return False
+    return bool(EMAIL_REGEX.match(v))
 
 
 def _is_valid_indonesian_phone(value: str) -> bool:

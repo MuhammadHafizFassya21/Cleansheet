@@ -4,7 +4,6 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Path
-from fastapi.responses import StreamingResponse
 
 from ..models.manual_review import (
     ManualReviewIssuesResponse,
@@ -13,7 +12,7 @@ from ..models.manual_review import (
     ManualValidationResult,
     ManualReviewApplyResponse,
 )
-from ..services import parser_service, quality_engine, manual_review_service, dataset_store
+from ..services import parser_service, manual_review_service, dataset_store, quality_gate_service
 from ..services.file_store import save_cleaned_csv
 
 router = APIRouter()
@@ -21,27 +20,30 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/issues", response_model=ManualReviewIssuesResponse)
-async def get_issues_from_file(file: UploadFile = File(...)):
-    """Extract manual review issues from a freshly uploaded CSV file."""
+def get_issues_from_file(file: UploadFile = File(...)):
     try:
-        contents = await file.read()
+        contents = file.file.read()
     except Exception:
         raise HTTPException(status_code=400, detail="Unable to read file.")
 
-    parser_service.validate_csv_file(file, len(contents))
+    file_name = file.filename or "dataset.csv"
+    parser_service.validate_data_file(file, len(contents))
 
     try:
-        df = parser_service.read_csv_file(contents)
+        df = parser_service.read_data_file(contents, file_name)
     except Exception:
-        raise HTTPException(status_code=400, detail="Unable to parse CSV file.")
+        raise HTTPException(status_code=400, detail="Unable to parse file.")
 
     dataset_id = f"ds_{uuid.uuid4().hex[:8]}"
-    analysis = quality_engine.analyze_dataframe(df, dataset_id)
-    
-    manual_issues = manual_review_service.get_manual_review_issues(df, analysis.issues)
-    
-    # Store this dataset so we can apply edits to it
-    dataset_store.save_dataset(df, file.filename or "dataset.csv", stage="uploaded", metadata={"dataset_id": dataset_id})
+    manual_issues = manual_review_service.get_manual_review_issues(df)
+
+    dataset_store.save_dataset(
+        df,
+        file_name,
+        stage="uploaded",
+        metadata={"source": "manual_review_upload"},
+        dataset_id=dataset_id,
+    )
 
     return ManualReviewIssuesResponse(
         dataset_id=dataset_id,
@@ -51,16 +53,14 @@ async def get_issues_from_file(file: UploadFile = File(...)):
 
 
 @router.get("/issues/{dataset_id}", response_model=ManualReviewIssuesResponse)
-async def get_issues_from_store(dataset_id: str = Path(...)):
-    """Fetch manual review issues for an already stored dataset (e.g. after auto-cleaning)."""
+def get_issues_from_store(dataset_id: str = Path(...)):
     stored = dataset_store.get_dataset(dataset_id)
     if not stored:
         raise HTTPException(status_code=404, detail="Dataset not found or expired.")
-        
+
     df = stored["df"]
-    analysis = quality_engine.analyze_dataframe(df, dataset_id)
-    manual_issues = manual_review_service.get_manual_review_issues(df, analysis.issues)
-    
+    manual_issues = manual_review_service.get_manual_review_issues(df)
+
     return ManualReviewIssuesResponse(
         dataset_id=dataset_id,
         manual_review_issues=manual_issues,
@@ -69,8 +69,7 @@ async def get_issues_from_store(dataset_id: str = Path(...)):
 
 
 @router.post("/validate", response_model=ManualValidationResult)
-async def validate_manual_edit(request: ManualValidateRequest):
-    """Validate a single manual edit value before applying."""
+def validate_manual_edit(request: ManualValidateRequest):
     return manual_review_service.validate_manual_value(
         column=request.column,
         value=request.value,
@@ -87,93 +86,153 @@ def _parse_json_field(field_str: str) -> Any:
         return []
 
 
+def _resolve_acknowledged_keys(
+    marked_valid_list: list,
+    pending_issues: list,
+) -> set[str]:
+    """Accept stable_key or legacy issue id."""
+    keys: set[str] = set()
+    id_to_stable = {iss.id: iss.stable_key for iss in pending_issues}
+    stable_set = {iss.stable_key for iss in pending_issues}
+
+    for item in marked_valid_list:
+        s = str(item)
+        if s in stable_set:
+            keys.add(s)
+        elif s in id_to_stable:
+            keys.add(id_to_stable[s])
+        elif ":" in s:
+            keys.add(s)
+    return keys
+
+
 @router.post("/apply", response_model=ManualReviewApplyResponse)
-async def apply_manual_review(
+def apply_manual_review(
     dataset_id: str = Form(None),
     file: UploadFile = File(None),
     edits: str = Form(default="[]"),
     marked_valid_issues: str = Form(default="[]"),
 ):
-    """
-    Apply manual edits to a dataset.
-    Supports two modes: dataset_id (already stored) OR file (newly uploaded).
-    """
     df = None
     original_name = "dataset.csv"
-    
-    # Mode A: Stored dataset
+
     if dataset_id:
         stored = dataset_store.get_dataset(dataset_id)
         if not stored:
             raise HTTPException(status_code=404, detail="Dataset not found or expired.")
         df = stored["df"]
         original_name = stored.get("file_name", "dataset.csv")
-    
-    # Mode B: File upload
+
     elif file:
         try:
-            contents = await file.read()
+            contents = file.file.read()
         except Exception:
             raise HTTPException(status_code=400, detail="Unable to read file.")
-        
-        parser_service.validate_csv_file(file, len(contents))
-        try:
-            df = parser_service.read_csv_file(contents)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Unable to parse CSV file.")
-        
+
         original_name = file.filename or "dataset.csv"
+        parser_service.validate_data_file(file, len(contents))
+        try:
+            df = parser_service.read_data_file(contents, original_name)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Unable to parse file.")
         dataset_id = f"ds_{uuid.uuid4().hex[:8]}"
     else:
         raise HTTPException(status_code=400, detail="Either dataset_id or file must be provided.")
 
-    # Parse edits and marked_valid
+    pending_before = manual_review_service.get_manual_review_issues(df)
+
     edits_list = _parse_json_field(edits)
     marked_valid_list = _parse_json_field(marked_valid_issues)
-    
-    edit_requests = []
+    acknowledged_keys = _resolve_acknowledged_keys(marked_valid_list, pending_before)
+
+    edit_requests: list[ManualEditRequest] = []
     for ed in edits_list:
         try:
             edit_requests.append(ManualEditRequest(**ed))
         except Exception:
             pass
 
-    # Apply edits
-    edited_df = manual_review_service.apply_manual_edits(df, edit_requests)
-    
-    # Re-analyze
-    final_dataset_id = f"ds_final_{uuid.uuid4().hex[:8]}"
-    analysis = quality_engine.analyze_dataframe(edited_df, final_dataset_id)
-    
-    # Check remaining issues
-    all_manual_issues = manual_review_service.get_manual_review_issues(edited_df, analysis.issues)
-    
-    # Filter out issues that were marked valid
-    remaining_issues = [
-        issue for issue in all_manual_issues 
-        if issue.id not in marked_valid_list
-    ]
+    edit_cell_keys = {(int(e.row_index), str(e.column)) for e in edit_requests}
 
-    # Generate CSV
+    unresolved = quality_gate_service.ensure_all_manual_issues_resolved(
+        pending_before, edit_cell_keys, acknowledged_keys
+    )
+    if unresolved:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Semua isu manual harus diperbaiki atau ditandai valid sebelum menyimpan.",
+                "unresolved": unresolved[:20],
+            },
+        )
+
+    val_errors, _ = quality_gate_service.validate_manual_edits_strict(
+        df, edit_requests, pending_before
+    )
+    if val_errors:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Nilai perbaikan masih tidak valid.",
+                "validation_errors": val_errors[:20],
+            },
+        )
+
+    edited_df = manual_review_service.apply_manual_edits(df, edit_requests)
+
+    final_df, gate = quality_gate_service.run_quality_gate(
+        edited_df,
+        acknowledged_issue_keys=acknowledged_keys,
+        apply_safety_net=True,
+    )
+
+    if gate.manual_review_count > 0:
+        # Get only manual issues that are blocking
+        from ..services.quality_gate_service import BLOCKING_MANUAL_TYPES
+        blocking_summary = [
+            f"Baris {i.row_index}, kolom {i.column} ({i.type}): {i.message}"
+            for i in gate.blocking_issues if i.type in BLOCKING_MANUAL_TYPES
+        ][:15]
+        
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Dataset belum lulus pemeriksaan kualitas final untuk isu manual. Tidak ada file yang diekspor.",
+                "gate_messages": gate.messages,
+                "blocking_issues": blocking_summary,
+                "remaining_issues_count": gate.manual_review_count,
+            },
+        )
+
     try:
-        csv_bytes = manual_review_service.generate_manual_review_csv(edited_df)
+        csv_bytes = manual_review_service.generate_manual_review_csv(final_df)
     except Exception:
         logger.exception("Failed to generate manual review CSV.")
         raise HTTPException(status_code=500, detail="Error generating final CSV.")
-        
+
     final_file_name = f"manual_clean_{original_name}"
     download_id = save_cleaned_csv(csv_bytes, final_file_name)
-    
-    # Save the final dataset
-    dataset_store.save_dataset(edited_df, final_file_name, stage="manually_reviewed", metadata={"dataset_id": final_dataset_id})
+
+    final_dataset_id = f"ds_final_{uuid.uuid4().hex[:12]}"
+    dataset_store.save_dataset(
+        final_df,
+        final_file_name,
+        stage="manually_reviewed",
+        metadata={"source": "manual_review_apply", "quality_gate": "passed"},
+        dataset_id=final_dataset_id,
+    )
 
     return ManualReviewApplyResponse(
         dataset_id=dataset_id,
         final_dataset_id=final_dataset_id,
-        total_review_issues=len(edits_list) + len(marked_valid_list) + len(remaining_issues),
-        fixed_count=len(edits_list),
-        marked_valid_count=len(marked_valid_list),
-        remaining_issues_count=len(remaining_issues),
+        total_review_issues=len(pending_before),
+        fixed_count=len(edit_requests),
+        marked_valid_count=len(acknowledged_keys),
+        remaining_issues_count=0,
         download_ready=True,
         download_id=download_id,
+        quality_gate_passed=True,
+        quality_score=gate.quality_score,
+        quality_status=gate.status,
+        gate_messages=gate.messages,
     )
