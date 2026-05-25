@@ -213,3 +213,7 @@ Lihat [docs/ROADMAP.md](docs/ROADMAP.md).
 ## Troubleshooting
 
 Jika `npm run build` gagal dengan `spawn EPERM` di Windows, biasanya ada policy atau antivirus yang memblokir proses spawn. Coba jalankan terminal sebagai Administrator, pastikan `node.exe` tidak diblokir, atau exclude folder project dari antivirus sementara.
+
+
+Live Demo:https://cleansheet.vercel.app/
+Backend API:https://cleansheet-ai-backend-946261257331.asia-southeast2.run.app
