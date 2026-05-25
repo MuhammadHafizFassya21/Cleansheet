@@ -52,22 +52,22 @@ async function getErrorMessage(response: Response, fallback: string) {
       if (msg) return msg;
       try {
         return JSON.stringify(data.detail);
-      } catch {}
+      } catch { }
     }
 
     if (data?.detail && typeof data.detail === "object") {
       try {
         return JSON.stringify(data.detail);
-      } catch {}
+      } catch { }
     }
     if (typeof data?.message === "string" && data.message.trim()) return data.message;
     if (typeof data?.error === "string" && data.error.trim()) return data.error;
-  } catch {}
+  } catch { }
 
   try {
     const text = (await response.clone().text())?.trim();
     if (text) return text;
-  } catch {}
+  } catch { }
 
   const statusBits: string[] = [];
   if (response.status) statusBits.push(`HTTP ${response.status}`);
