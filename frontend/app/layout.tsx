@@ -21,7 +21,7 @@ export default function RootLayout({
         <footer className="border-t border-slate-200/50 bg-white/40 dark:border-slate-800/50 dark:bg-slate-900/40 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <p>
-              © {new Date().getFullYear()} CleanSheet AI. Dibuat untuk kualitas data yang lebih baik.
+              © {new Date().getFullYear()} CleanSheet AI. Muhammad Hafiz Fassya - #JuaraVibeCoding!
             </p>
           </div>
         </footer>
