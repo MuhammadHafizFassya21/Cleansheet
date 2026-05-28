@@ -54,18 +54,8 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Mobile menu indicator / Helper info */}
-        <div className="flex items-center gap-4">
-          <a
-            href="https://github.com/MuhammadHafizFassya21/Cleansheet"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs text-slate-500 hover:text-slate-950 dark:hover:text-white transition-colors duration-200"
-          >
-            <span>Repositori GitHub</span>
-          </a>
-        </div>
       </div>
     </header>
   );
 }
+
