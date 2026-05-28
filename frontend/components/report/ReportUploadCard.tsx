@@ -67,7 +67,7 @@ export default function ReportUploadCard({
               Opsi 2 — Unggah file baru
             </p>
             <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-              Unggah file data lain untuk membuat laporan mandiri (CSV, Excel, TSV).
+              Unggah file data lain untuk membuat laporan mandiri (Excel, CSV, TSV).
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/30 dark:text-slate-200">

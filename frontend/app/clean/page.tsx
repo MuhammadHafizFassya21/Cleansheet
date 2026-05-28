@@ -358,7 +358,7 @@ function CleanContent() {
                       : ""
                   }`}
                 >
-                  {applyResult.download_ready ? "Unduh CSV Bersih" : "Unduh (perlu tinjauan manual)"}
+                  {applyResult.download_ready ? "Unduh Data Bersih" : "Unduh (perlu tinjauan manual)"}
                 </a>
               </div>
             </div>

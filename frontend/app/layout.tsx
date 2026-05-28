@@ -3,9 +3,9 @@ import "./globals.css";
 import Navbar from "@/components/shared/Navbar";
 
 export const metadata: Metadata = {
-  title: "CleanSheet AI — AI-Powered CSV Data Quality Checker",
+  title: "CleanSheet AI — AI-Powered Data Quality Checker",
   description:
-    "Deteksi kesalahan tersembunyi pada CSV Anda secara instan dan bersihkan dengan kecerdasan buatan.",
+    "Deteksi masalah kualitas data secara instan dan bersihkan dataset Anda dengan kecerdasan buatan.",
 };
 
 export default function RootLayout({

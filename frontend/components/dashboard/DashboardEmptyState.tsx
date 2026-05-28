@@ -11,7 +11,7 @@ export default function DashboardEmptyState() {
       </div>
       <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Belum ada dataset dianalisis</h2>
       <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-        Unggah CSV untuk mendeteksi duplikat, nilai kosong, whitespace bermasalah, karakter aneh, email tidak valid, dan nomor telepon Indonesia yang tidak valid.
+        Unggah dataset untuk mendeteksi duplikat, nilai kosong, whitespace bermasalah, karakter aneh, email tidak valid, dan nomor telepon Indonesia yang tidak valid.
       </p>
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
         {[

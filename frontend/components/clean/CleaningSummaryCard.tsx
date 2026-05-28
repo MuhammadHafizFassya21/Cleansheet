@@ -75,7 +75,7 @@ export default function CleaningSummaryCard({ summary }: CleaningSummaryCardProp
 
       {!gatePassed && summary.has_manual_review_issues && (
         <p className="mt-4 text-xs text-amber-800 dark:text-amber-200">
-          Selesaikan tinjauan manual terlebih dahulu. Unduh CSV final hanya tersedia setelah dataset lulus
+          Selesaikan tinjauan manual terlebih dahulu. Unduh data final hanya tersedia setelah dataset lulus
           pemeriksaan kualitas.
         </p>
       )}

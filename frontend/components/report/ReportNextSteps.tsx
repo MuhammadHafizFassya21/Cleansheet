@@ -10,7 +10,7 @@ export default function ReportNextSteps() {
         {[
           "Tinjau isu kritikal terlebih dahulu.",
           "Terapkan aksi pembersihan yang aman.",
-          "Unduh CSV bersih dari halaman Bersihkan.",
+          "Unduh data bersih dari halaman Bersihkan.",
           "Jalankan analisis ulang setelah dibersihkan.",
         ].map((step, idx) => (
           <li key={step} className="flex gap-3">

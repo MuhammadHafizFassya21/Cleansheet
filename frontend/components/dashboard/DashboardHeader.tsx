@@ -11,10 +11,10 @@ export default function DashboardHeader() {
             Dashboard Kualitas Data
           </p>
           <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-5xl">
-            Pahami kualitas CSV Anda dalam satu tampilan.
+            Pahami kualitas data Anda dalam satu tampilan.
           </h1>
           <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
-            Unggah CSV untuk mendeteksi masalah kualitas data tersembunyi dan memahami kesiapan dataset Anda.
+            Unggah dataset untuk mendeteksi masalah kualitas data tersembunyi dan memahami kesiapan dataset Anda.
             CleanSheet menampilkan skor, ringkasan isu, kolom paling bermasalah, dan tabel isu yang bisa difilter.
           </p>
         </div>

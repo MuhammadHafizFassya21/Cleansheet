@@ -55,7 +55,7 @@ export default function ManualReviewSummary({
               !downloadUrl ? "opacity-50 pointer-events-none" : ""
             }`}
           >
-            Unduh CSV Hasil Manual
+            Unduh Data Hasil Manual
           </a>
           {reportHref && (
             <Link

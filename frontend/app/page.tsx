@@ -63,8 +63,8 @@ const featureCards = [
     icon: ShieldAlert,
   },
   {
-    title: "Cleaned CSV Download",
-    description: "Mengunduh dataset yang sudah diperbaiki sebagai CSV baru.",
+    title: "Cleaned Data Download",
+    description: "Mengunduh dataset yang sudah diperbaiki dan siap digunakan.",
     icon: FileText,
   },
 ];
@@ -72,7 +72,7 @@ const featureCards = [
 const howItWorks = [
   {
     step: "1",
-    title: "Upload CSV",
+    title: "Upload Dataset",
     description: "Unggah file dan langsung lihat pratinjau baris dan kolom.",
   },
   {
@@ -92,8 +92,8 @@ const howItWorks = [
   },
   {
     step: "5",
-    title: "Unduh CSV bersih",
-    description: "Ekspor CSV yang lebih baik untuk analisis.",
+    title: "Unduh Data Bersih",
+    description: "Ekspor dataset yang lebih baik untuk analisis.",
   },
 ];
 
@@ -151,11 +151,11 @@ export default function HomePage() {
             CleanSheet <span className="text-emerald-500">AI</span>
           </h1>
           <p className="mt-4 text-xl font-semibold text-slate-800 dark:text-slate-100">
-            Pengecek kualitas data bertenaga AI untuk file CSV.
+            Pengecek kualitas data bertenaga AI untuk dataset Anda.
           </p>
           <p className="mt-4 max-w-2xl text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
             Unggah dataset Anda, deteksi masalah kualitas data tersembunyi, pahami risikonya lewat insight AI,
-            bersihkan data dengan aman, lalu unduh CSV yang lebih baik.
+            bersihkan data dengan aman, lalu unduh dataset yang lebih baik.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -184,7 +184,7 @@ export default function HomePage() {
               Data yang berantakan menghasilkan keputusan yang tidak akurat.
             </h2>
             <p className="mt-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Banyak file CSV dan spreadsheet terlihat rapi, tapi menyimpan masalah tersembunyi seperti
+              Banyak dataset dan spreadsheet terlihat rapi, tapi menyimpan masalah tersembunyi seperti
               duplikat, missing value, email tidak valid, nomor telepon tidak konsisten, spasi berlebih, dan
               karakter aneh.
             </p>

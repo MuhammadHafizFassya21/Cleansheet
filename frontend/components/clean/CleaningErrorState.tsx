@@ -18,7 +18,7 @@ export default function CleaningErrorState({ message }: CleaningErrorStateProps)
         {message}
       </p>
       <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-        Please upload a valid CSV file. Make sure the file is not empty and does not exceed the size limit.
+        Please upload a valid data file. Make sure the file is not empty and does not exceed the size limit.
       </p>
     </div>
   );

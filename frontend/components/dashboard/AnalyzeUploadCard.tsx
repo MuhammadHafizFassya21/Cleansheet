@@ -28,9 +28,9 @@ export default function AnalyzeUploadCard({
           <Loader2 className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">Unggah CSV untuk Analisis</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Unggah Dataset untuk Analisis</p>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Seret dan letakkan CSV Anda, atau pilih file dari komputer untuk memulai pengecekan kualitas data.
+            Seret dan letakkan dataset Anda, atau pilih file dari komputer untuk memulai pengecekan kualitas data.
           </p>
         </div>
       </div>

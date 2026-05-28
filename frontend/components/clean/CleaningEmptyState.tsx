@@ -12,7 +12,7 @@ export default function CleaningEmptyState() {
       </div>
       <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Belum ada dataset dipilih</h2>
       <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-        Unggah CSV untuk mendapatkan rekomendasi pembersihan berdasarkan isu kualitas data yang terdeteksi.
+        Unggah dataset untuk mendapatkan rekomendasi pembersihan berdasarkan isu kualitas data yang terdeteksi.
       </p>
     </div>
   );

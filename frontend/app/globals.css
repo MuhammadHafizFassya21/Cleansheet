@@ -5,16 +5,18 @@
   --color-brand-secondary: hsl(156, 72%, 15%);
   --color-brand-light: hsl(156, 72%, 97%);
   --color-brand-dark: hsl(156, 72%, 5%);
-  
+
   --color-bg-base-light: hsl(210, 40%, 98%);
   --color-bg-base-dark: hsl(222, 47%, 11%);
-  
+
   --font-family-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Custom styles and scrollbar customization */
 @layer base {
-  html, body {
+
+  html,
+  body {
     font-family: var(--font-family-sans);
     scroll-behavior: smooth;
   }

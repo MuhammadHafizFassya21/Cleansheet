@@ -13,7 +13,7 @@ export default function ManualReviewNotice() {
         menebak email, telepon, atau angka negatif mencurigakan secara otomatis.
       </div>
       <div className="mt-2 text-xs font-medium text-amber-800 dark:text-amber-200">
-        CSV final hanya dapat diunduh setelah semua isu diselesaikan dan dataset lulus pemeriksaan kualitas
+        Data final hanya dapat diunduh setelah semua isu diselesaikan dan dataset lulus pemeriksaan kualitas
         otomatis.
       </div>
     </div>
