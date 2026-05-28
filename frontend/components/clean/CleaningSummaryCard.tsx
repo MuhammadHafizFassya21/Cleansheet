@@ -27,6 +27,7 @@ export default function CleaningSummaryCard({ summary }: CleaningSummaryCardProp
     <div className="rounded-3xl border border-slate-200/80 bg-white/90 dark:border-slate-800 dark:bg-slate-950/80 p-5 shadow-sm max-w-2xl w-full">
       <div className="mb-3 flex items-start gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-300">
+
           <CheckCircle2 className="h-5 w-5" />
         </div>
         <div>
