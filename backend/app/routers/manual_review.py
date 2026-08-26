@@ -101,8 +101,6 @@ def _resolve_acknowledged_keys(
             keys.add(s)
         elif s in id_to_stable:
             keys.add(id_to_stable[s])
-        elif ":" in s:
-            keys.add(s)
     return keys
 
 
@@ -178,7 +176,16 @@ def apply_manual_review(
             },
         )
 
-    edited_df = manual_review_service.apply_manual_edits(df, edit_requests)
+    try:
+        edited_df = manual_review_service.apply_manual_edits(df, edit_requests)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Nilai perbaikan tidak kompatibel dengan tipe kolom.",
+                "validation_errors": [str(exc)],
+            },
+        )
 
     final_df, gate = quality_gate_service.run_quality_gate(
         edited_df,
@@ -218,7 +225,11 @@ def apply_manual_review(
         final_df,
         final_file_name,
         stage="manually_reviewed",
-        metadata={"source": "manual_review_apply", "quality_gate": "passed"},
+        metadata={
+            "source": "manual_review_apply",
+            "quality_gate": "passed",
+            "acknowledged_issue_keys": sorted(acknowledged_keys),
+        },
         dataset_id=final_dataset_id,
     )
 

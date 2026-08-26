@@ -260,8 +260,47 @@ def validate_manual_value(column: str, value: Optional[str], issue_type: str) ->
     )
 
 
+def coerce_manual_value(series: pd.Series, value: str) -> Any:
+    """Convert a manual string edit to the existing column dtype safely."""
+    raw = value.strip()
+    dtype = series.dtype
+
+    if pd.api.types.is_bool_dtype(dtype):
+        normalized = raw.lower()
+        if normalized in {"true", "1", "yes", "y", "t"}:
+            return True
+        if normalized in {"false", "0", "no", "n", "f"}:
+            return False
+        raise ValueError(f"Nilai '{value}' tidak valid untuk kolom boolean.")
+
+    if pd.api.types.is_integer_dtype(dtype):
+        try:
+            number = float(raw)
+        except (TypeError, ValueError):
+            raise ValueError(f"Nilai '{value}' tidak valid untuk kolom integer.")
+        if not number.is_integer():
+            raise ValueError(f"Nilai '{value}' tidak valid untuk kolom integer.")
+        return int(number)
+
+    if pd.api.types.is_float_dtype(dtype):
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            raise ValueError(f"Nilai '{value}' tidak valid untuk kolom angka.")
+
+    if pd.api.types.is_datetime64_any_dtype(dtype):
+        try:
+            return pd.to_datetime(raw)
+        except (TypeError, ValueError):
+            raise ValueError(f"Nilai '{value}' tidak valid untuk kolom tanggal.")
+
+    # Object/string columns remain strings so phone leading zeroes are preserved.
+    return value
+
+
 def apply_manual_edits(df: pd.DataFrame, edits: list[ManualEditRequest]) -> pd.DataFrame:
     updated = df.copy()
+    converted_edits: list[tuple[int, str, Any]] = []
 
     for e in edits:
         # e.row_index was derived from pandas index label + 1
@@ -274,7 +313,10 @@ def apply_manual_edits(df: pd.DataFrame, edits: list[ManualEditRequest]) -> pd.D
         if col not in updated.columns:
             continue
 
-        updated.at[df_label, col] = e.new_value
+        converted_edits.append((df_label, col, coerce_manual_value(updated[col], e.new_value)))
+
+    for df_label, col, value in converted_edits:
+        updated.at[df_label, col] = value
 
     return updated
 

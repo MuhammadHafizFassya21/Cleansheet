@@ -118,6 +118,12 @@ class QualityGateResult:
         }
 
 
+def acknowledged_keys_for_dataset(stored: dict[str, Any]) -> set[str]:
+    """Read only validated acknowledgement keys persisted with a dataset."""
+    keys = stored.get("metadata", {}).get("acknowledged_issue_keys", [])
+    return {str(key) for key in keys if isinstance(key, str)}
+
+
 def run_quality_gate(
     df: pd.DataFrame,
     acknowledged_issue_keys: set[str] | None = None,

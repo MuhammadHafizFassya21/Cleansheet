@@ -13,7 +13,9 @@ def check_dataset_quality_gate(dataset_id: str = Path(...)):
         raise HTTPException(status_code=404, detail="Dataset not found or expired.")
 
     final_df, gate = quality_gate_service.run_quality_gate(
-        stored["df"], apply_safety_net=True
+        stored["df"],
+        acknowledged_issue_keys=quality_gate_service.acknowledged_keys_for_dataset(stored),
+        apply_safety_net=True,
     )
 
     return {
