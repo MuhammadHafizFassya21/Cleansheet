@@ -5,3 +5,7 @@ pandas
 openpyxl
 python-multipart
 google-generativeai
+psycopg[binary]
+psycopg-pool
+vercel-blob
+pydantic-settings
