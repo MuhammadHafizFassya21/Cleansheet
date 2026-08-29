@@ -23,21 +23,71 @@ class Settings(BaseSettings):
         description="Vercel Blob Read/Write token (vercel_blob_rw_...)"
     )
 
+    # Cloudflare R2 Persistent Storage (Phase 2.14+)
+    R2_ACCOUNT_ID: Optional[str] = Field(
+        default=None,
+        description="Cloudflare Account ID for R2 storage"
+    )
+    R2_ACCESS_KEY_ID: Optional[str] = Field(
+        default=None,
+        description="Cloudflare R2 API Access Key ID"
+    )
+    R2_SECRET_ACCESS_KEY: Optional[str] = Field(
+        default=None,
+        description="Cloudflare R2 API Secret Access Key"
+    )
+    R2_BUCKET_NAME: Optional[str] = Field(
+        default=None,
+        description="Cloudflare R2 Bucket Name (e.g. cleansheet-datasets)"
+    )
+    R2_ENDPOINT_URL: Optional[str] = Field(
+        default=None,
+        description="Cloudflare R2 S3 Endpoint URL (https://<ACCOUNT_ID>.r2.cloudflarestorage.com)"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore"
     )
 
+    @property
+    def r2_endpoint(self) -> Optional[str]:
+        """Returns explicitly set R2_ENDPOINT_URL or constructs it from R2_ACCOUNT_ID."""
+        if self.R2_ENDPOINT_URL and self.R2_ENDPOINT_URL.strip():
+            return self.R2_ENDPOINT_URL.strip()
+        if self.R2_ACCOUNT_ID and self.R2_ACCOUNT_ID.strip():
+            return f"https://{self.R2_ACCOUNT_ID.strip()}.r2.cloudflarestorage.com"
+        return None
+
+    def validate_r2_credentials(self) -> dict[str, bool]:
+        """Check availability of Cloudflare R2 credentials without raising exception."""
+        has_keys = bool(
+            self.R2_ACCESS_KEY_ID and self.R2_ACCESS_KEY_ID.strip() and
+            self.R2_SECRET_ACCESS_KEY and self.R2_SECRET_ACCESS_KEY.strip()
+        )
+        has_bucket = bool(self.R2_BUCKET_NAME and self.R2_BUCKET_NAME.strip())
+        has_endpoint = bool(self.r2_endpoint)
+
+        return {
+            "r2_keys_configured": has_keys,
+            "r2_bucket_configured": has_bucket,
+            "r2_endpoint_configured": has_endpoint,
+            "r2_fully_configured": has_keys and has_bucket and has_endpoint
+        }
+
     def validate_infrastructure_credentials(self) -> dict[str, bool]:
         """Check availability of phase 1 storage credentials without raising exception."""
         has_db = bool(self.DATABASE_URL and self.DATABASE_URL.strip())
         has_blob = bool(self.BLOB_READ_WRITE_TOKEN and self.BLOB_READ_WRITE_TOKEN.strip())
+        r2_status = self.validate_r2_credentials()
         return {
             "database_url_configured": has_db,
             "blob_token_configured": has_blob,
-            "fully_configured": has_db and has_blob
+            "r2_configured": r2_status["r2_fully_configured"],
+            "fully_configured": has_db and (has_blob or r2_status["r2_fully_configured"])
         }
+
 
 
 settings = Settings()

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT_SECONDS = 15
 VERCEL_BLOB_BASE_URL = "https://blob.vercel-storage.com"
-VERCEL_BLOB_API_VERSION = "7"
+VERCEL_BLOB_API_VERSION = "12"
 
 
 class VercelBlobError(Exception):
@@ -37,20 +37,32 @@ class VercelBlobBadRequestError(VercelBlobError):
 
 class VercelBlobStorageClient:
     """
-    Direct Vercel Blob REST API (v7) server-side client supporting Private Store.
-    Does not rely on third-party SDKs with hardcoded public access headers.
+    Direct Vercel Blob REST API (v12) server-side client supporting Private Store.
+    Implements Vercel signed-token control-plane delegation flow (Option A).
     """
 
     def __init__(self, token: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT_SECONDS):
-        self.token = token or settings.BLOB_READ_WRITE_TOKEN or os.getenv("BLOB_READ_WRITE_TOKEN")
+        if token is not None:
+            self.token = token
+        else:
+            self.token = settings.BLOB_READ_WRITE_TOKEN or os.getenv("BLOB_READ_WRITE_TOKEN")
         self.timeout = timeout
 
     def is_configured(self) -> bool:
         """Check if BLOB_READ_WRITE_TOKEN is present and non-empty."""
         return bool(self.token and self.token.strip())
 
-    def _get_headers(self, extra_headers: Optional[dict[str, str]] = None) -> dict[str, str]:
-        """Build standard authorization & API version headers without leaking secrets."""
+    def _extract_store_id(self) -> Optional[str]:
+        """Extract store_id from BLOB_READ_WRITE_TOKEN (format: vercel_blob_rw_<store_id>_<hash>)."""
+        if not self.token:
+            return None
+        parts = self.token.split("_")
+        if len(parts) >= 4:
+            return parts[3]
+        return None
+
+    def _get_auth_headers(self, extra_headers: Optional[dict[str, str]] = None) -> dict[str, str]:
+        """Build standard authorization & API version headers using static BLOB_READ_WRITE_TOKEN."""
         if not self.is_configured():
             raise ValueError("BLOB_READ_WRITE_TOKEN is not configured.")
 
@@ -62,6 +74,44 @@ class VercelBlobStorageClient:
             headers.update(extra_headers)
         return headers
 
+    def _issue_signed_token(self, pathname: str, operations: list[str]) -> dict[str, Any]:
+        """
+        Request short-lived signed-token material from Vercel Control API (`POST /signed-token`).
+        Uses static BLOB_READ_WRITE_TOKEN to issue scoped delegation credentials.
+        """
+        if not self.is_configured():
+            raise ValueError("BLOB_READ_WRITE_TOKEN is not configured.")
+
+        clean_path = pathname.lstrip("/")
+        url = f"{VERCEL_BLOB_BASE_URL}/signed-token"
+        headers = self._get_auth_headers({
+            "content-type": "application/json",
+        })
+        body = json.dumps({
+            "pathname": clean_path,
+            "operations": operations,
+        }).encode("utf-8")
+
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                resp_bytes = resp.read()
+                data = json.loads(resp_bytes.decode("utf-8")) if resp_bytes else {}
+                if not data or not data.get("delegationToken"):
+                    raise VercelBlobError("Malformed signed-token response: missing delegationToken")
+                return data
+        except urllib.error.HTTPError as http_err:
+            self._handle_http_error(http_err, f"issue signed token for '{clean_path}'")
+        except urllib.error.URLError as url_err:
+            logger.error(f"Network failure issuing signed token for '{clean_path}': {url_err}")
+            raise VercelBlobError(f"Network error during signed token issuance: {url_err}")
+        except Exception as exc:
+            if isinstance(exc, VercelBlobError):
+                raise
+            logger.error(f"Unexpected error issuing signed token for '{clean_path}': {exc}")
+            raise VercelBlobError(f"Signed token issuance failed: {exc}")
+
     def put_object(
         self,
         path: str,
@@ -70,19 +120,30 @@ class VercelBlobStorageClient:
         access: str = "private",
     ) -> dict[str, Any]:
         """
-        Upload bytes object to Vercel Blob using direct REST PUT call.
-        Supports Private Store (`x-access: private` or `x-mp-access: private`).
+        Upload bytes object to Vercel Blob using signed delegation token flow.
+        1. Issues a signed token (`POST /signed-token`).
+        2. Uploads via Vercel storage endpoint using client token delegation authorization.
         """
         clean_path = path.lstrip("/")
-        encoded_path = urllib.parse.quote(clean_path, safe="/")
-        url = f"{VERCEL_BLOB_BASE_URL}/{encoded_path}"
+        
+        # Step 1: Issue signed delegation token
+        signed_token_info = self._issue_signed_token(clean_path, operations=["put"])
+        delegation_token = signed_token_info["delegationToken"]
+        store_id = self._extract_store_id()
 
-        headers = self._get_headers({
-            "x-access": access,
+        encoded_path = urllib.parse.quote(clean_path, safe="/")
+        url = f"{VERCEL_BLOB_BASE_URL}/?pathname={encoded_path}"
+
+        # Step 2: Perform upload using client token delegation authorization
+        client_auth_header = f"Bearer vercel_blob_client_{store_id}_{delegation_token}" if store_id else f"Bearer {delegation_token}"
+
+        headers = {
+            "authorization": client_auth_header,
+            "x-api-version": VERCEL_BLOB_API_VERSION,
             "x-content-type": content_type,
             "x-add-random-suffix": "0",
             "x-allow-overwrite": "1",
-        })
+        }
 
         req = urllib.request.Request(url, data=body, headers=headers, method="PUT")
 
@@ -97,18 +158,20 @@ class VercelBlobStorageClient:
             logger.error(f"Network failure uploading object '{clean_path}': {url_err}")
             raise VercelBlobError(f"Network error during Blob upload: {url_err}")
         except Exception as exc:
+            if isinstance(exc, VercelBlobError):
+                raise
             logger.error(f"Unexpected error uploading object '{clean_path}': {exc}")
             raise VercelBlobError(f"Blob upload failed: {exc}")
 
     def get_object_bytes(self, url_or_path: str) -> bytes:
         """
-        Fetch raw bytes of a Blob object server-side using bearer authorization.
+        Fetch raw bytes of a Blob object server-side using bearer authorization or delegation.
         """
         if not self.is_configured():
             raise ValueError("BLOB_READ_WRITE_TOKEN is not configured.")
 
         url = self._resolve_url(url_or_path)
-        headers = self._get_headers()
+        headers = self._get_auth_headers()
 
         req = urllib.request.Request(url, headers=headers, method="GET")
 
@@ -121,6 +184,8 @@ class VercelBlobStorageClient:
             logger.error(f"Network failure reading Blob object '{url_or_path}': {url_err}")
             raise VercelBlobError(f"Network error during Blob read: {url_err}")
         except Exception as exc:
+            if isinstance(exc, VercelBlobError):
+                raise
             logger.error(f"Unexpected error reading Blob object '{url_or_path}': {exc}")
             raise VercelBlobError(f"Blob read failed: {exc}")
 
@@ -132,7 +197,7 @@ class VercelBlobStorageClient:
             raise ValueError("BLOB_READ_WRITE_TOKEN is not configured.")
 
         url = self._resolve_url(url_or_path)
-        headers = self._get_headers()
+        headers = self._get_auth_headers()
 
         req = urllib.request.Request(url, headers=headers, method="GET")
 
@@ -147,19 +212,24 @@ class VercelBlobStorageClient:
         except urllib.error.HTTPError as http_err:
             self._handle_http_error(http_err, f"check metadata at '{url_or_path}'")
         except Exception as exc:
+            if isinstance(exc, VercelBlobError):
+                raise
             raise VercelBlobError(f"Blob head failed: {exc}")
 
     def delete_object(self, url_or_path: str) -> None:
         """
-        Delete a Blob object from Vercel Blob using server-side DELETE REST call.
+        Delete a Blob object from Vercel Blob using control-plane DELETE call (`POST /delete` or `DELETE`).
         """
         if not self.is_configured():
             raise ValueError("BLOB_READ_WRITE_TOKEN is not configured.")
 
-        url = self._resolve_url(url_or_path)
-        headers = self._get_headers()
+        # Vercel Blob control-plane delete call: POST /delete with {"urls": [url]}
+        url = f"{VERCEL_BLOB_BASE_URL}/delete"
+        target_url = self._resolve_url(url_or_path)
+        headers = self._get_auth_headers({"content-type": "application/json"})
+        body = json.dumps({"urls": [target_url]}).encode("utf-8")
 
-        req = urllib.request.Request(url, headers=headers, method="DELETE")
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
 
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
@@ -174,6 +244,8 @@ class VercelBlobStorageClient:
             logger.error(f"Network failure deleting Blob object '{url_or_path}': {url_err}")
             raise VercelBlobError(f"Network error during Blob delete: {url_err}")
         except Exception as exc:
+            if isinstance(exc, VercelBlobError):
+                raise
             logger.error(f"Unexpected error deleting Blob object '{url_or_path}': {exc}")
             raise VercelBlobError(f"Blob delete failed: {exc}")
 
@@ -196,17 +268,22 @@ class VercelBlobStorageClient:
         except Exception:
             body_msg = str(http_err)
 
-        log_msg = f"HTTP {status} when attempting to {action_desc}: {body_msg}"
+        # Sanitize error message to prevent token leakage
+        sanitized_msg = body_msg
+        if self.token and self.token in sanitized_msg:
+            sanitized_msg = sanitized_msg.replace(self.token, "[REDACTED_TOKEN]")
+
+        log_msg = f"HTTP {status} when attempting to {action_desc}: {sanitized_msg}"
         logger.error(log_msg)
 
         if status in (401, 403):
-            raise VercelBlobAuthError(f"Authentication/Authorization failed ({status}): {body_msg}")
+            raise VercelBlobAuthError(f"Authentication/Authorization failed ({status}): {sanitized_msg}")
         elif status == 404:
-            raise VercelBlobNotFoundError(f"Blob object not found (404): {body_msg}")
+            raise VercelBlobNotFoundError(f"Blob object not found (404): {sanitized_msg}")
         elif status == 400:
-            raise VercelBlobBadRequestError(f"Bad request to Vercel Blob (400): {body_msg}")
+            raise VercelBlobBadRequestError(f"Bad request to Vercel Blob (400): {sanitized_msg}")
         else:
-            raise VercelBlobError(f"Vercel Blob server error ({status}): {body_msg}")
+            raise VercelBlobError(f"Vercel Blob server error ({status}): {sanitized_msg}")
 
 
 def get_blob_client(token: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT_SECONDS) -> VercelBlobStorageClient:

@@ -7,7 +7,7 @@ Covers:
 4. Read request (headers, endpoint, response bytes).
 5. Delete request (headers, endpoint, idempotent 404).
 6. Non-leakage of authorization token in logs or error messages.
-7. Private access header verification (`x-access: private`).
+7. Private access header verification.
 8. HTTP error code handling (400, 401/403, 404, 500).
 9. Timeout handling.
 """
@@ -59,23 +59,33 @@ class TestVercelBlobStorageClientUnit(unittest.TestCase):
 
     @patch("urllib.request.urlopen")
     def test_03_put_object_private_headers(self, mock_urlopen):
-        """Verify put_object sends x-access: private and Authorization Bearer header to correct REST endpoint."""
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({"url": "https://blob.vercel.com/datasets/test.csv"}).encode("utf-8")
-        mock_response.__enter__.return_value = mock_response
-        mock_urlopen.return_value = mock_response
+        """Verify put_object issues signed token and performs PUT with delegation authorization header."""
+        token_response = MagicMock()
+        token_response.read.return_value = json.dumps({"delegationToken": "mock_del_token"}).encode("utf-8")
+        token_response.__enter__.return_value = token_response
 
-        client = VercelBlobStorageClient(token="secret_token_abc")
+        put_response = MagicMock()
+        put_response.read.return_value = json.dumps({"url": "https://blob.vercel.com/datasets/test.csv"}).encode("utf-8")
+        put_response.__enter__.return_value = put_response
+
+        mock_urlopen.side_effect = [token_response, put_response]
+
+        client = VercelBlobStorageClient(token="vercel_blob_rw_31VulpnJlokzC4iv_secret")
         res = client.put_object("datasets/test.csv", b"col1,col2\n1,2", content_type="text/csv; charset=utf-8")
 
         self.assertEqual(res["url"], "https://blob.vercel.com/datasets/test.csv")
-        mock_urlopen.assert_called_once()
+        self.assertEqual(mock_urlopen.call_count, 2)
 
-        req = mock_urlopen.call_args[0][0]
-        self.assertEqual(req.full_url, "https://blob.vercel-storage.com/datasets/test.csv")
-        self.assertEqual(req.get_header("Authorization"), "Bearer secret_token_abc")
-        self.assertEqual(req.get_header("X-access"), "private")
-        self.assertEqual(req.get_header("X-content-type"), "text/csv; charset=utf-8")
+        # First call: signed token request
+        req1 = mock_urlopen.call_args_list[0][0][0]
+        self.assertEqual(req1.full_url, "https://blob.vercel-storage.com/signed-token")
+        self.assertEqual(req1.get_header("Authorization"), "Bearer vercel_blob_rw_31VulpnJlokzC4iv_secret")
+
+        # Second call: PUT content request with delegation header
+        req2 = mock_urlopen.call_args_list[1][0][0]
+        self.assertIn("https://blob.vercel-storage.com/?pathname=datasets/test.csv", req2.full_url)
+        self.assertEqual(req2.get_header("Authorization"), "Bearer vercel_blob_client_31VulpnJlokzC4iv_mock_del_token")
+        self.assertEqual(req2.get_header("X-content-type"), "text/csv; charset=utf-8")
 
     @patch("urllib.request.urlopen")
     def test_04_get_object_bytes_success(self, mock_urlopen):
@@ -119,12 +129,12 @@ class TestVercelBlobStorageClientUnit(unittest.TestCase):
 
     @patch("urllib.request.urlopen")
     def test_06_http_error_mappings(self, mock_urlopen):
-        """Verify HTTP 400, 401/403, and 500 are mapped to clean VercelBlobError subtypes without leaking tokens."""
+        """Verify HTTP 400, 401/403 are mapped to clean VercelBlobError subtypes without leaking tokens."""
         client = VercelBlobStorageClient(token="secret_token_xyz")
 
         # 400 Bad Request
         mock_urlopen.side_effect = urllib.error.HTTPError(
-            url="https://blob.vercel-storage.com/test.csv",
+            url="https://blob.vercel-storage.com/signed-token",
             code=400,
             msg="Bad Request",
             hdrs={},

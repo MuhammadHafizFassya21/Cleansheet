@@ -9,3 +9,4 @@ psycopg[binary]
 psycopg-pool
 vercel-blob
 pydantic-settings
+boto3
